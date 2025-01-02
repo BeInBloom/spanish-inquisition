@@ -45,6 +45,7 @@ func CreateOrUpdate(storage saver) func(w http.ResponseWriter, r *http.Request) 
 		}
 
 		if r.Method == http.MethodGet {
+			panic("not implemented")
 		}
 	}
 }
