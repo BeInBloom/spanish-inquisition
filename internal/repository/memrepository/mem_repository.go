@@ -82,10 +82,10 @@ func (m *memRepository) getGauge(repo repository[Gauge], id string) (string, err
 	return fmt.Sprintf("%v", f), nil
 }
 
-func (m *memRepository) CreateOrUpdate(repo_id string, id string, item string) error {
+func (m *memRepository) CreateOrUpdate(repoID string, id string, item string) error {
 	const fn = "MemStorage.CreateOrUpdate"
 
-	repo, ok := m.data[repo_id]
+	repo, ok := m.data[repoID]
 	if !ok {
 		return ErrNotCorrectMetricType
 	}
