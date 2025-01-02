@@ -41,10 +41,10 @@ func (m *memRepository) AddStorage(id string, repo any) error {
 	return nil
 }
 
-func (m *memRepository) Get(repo_id string, id string) (string, error) {
+func (m *memRepository) Get(repoID string, id string) (string, error) {
 	const fn = "MemStorage.Get"
 
-	repo, ok := m.data[repo_id]
+	repo, ok := m.data[repoID]
 	if !ok {
 		return "", ErrNotCorrectMetricType
 	}
@@ -126,12 +126,12 @@ func (m *memRepository) createCounter(repo repository[Counter], id, item string)
 func (m *memRepository) Dump() string {
 	var result string
 
-	for repo_id, repo := range m.data {
+	for repoID, repo := range m.data {
 		switch repo := repo.(type) {
 		case repository[Gauge]:
-			result += fmt.Sprintf("%v:\n%v\n", repo_id, repo.Dump())
+			result += fmt.Sprintf("%v:\n%v\n", repoID, repo.Dump())
 		case repository[Counter]:
-			result += fmt.Sprintf("%v:\n%v\n", repo_id, repo.Dump())
+			result += fmt.Sprintf("%v:\n%v\n", repoID, repo.Dump())
 		}
 	}
 
