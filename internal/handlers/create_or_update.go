@@ -10,7 +10,7 @@ import (
 )
 
 type saver interface {
-	CreateOrUpdate(repo_id string, id string, item string) error
+	CreateOrUpdate(repoID string, id string, item string) error
 	Dump() string
 }
 

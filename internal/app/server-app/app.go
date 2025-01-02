@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	COUNTER    = "counter"
-	GAUGE      = "gauge"
-	UPDATE_URL = "/update/"
-	ROOT_URL   = "/"
+	Counter   = "counter"
+	Gauge     = "gauge"
+	UpdateURL = "/update/"
+	RootURL   = "/"
 )
 
 type repository interface {
-	CreateOrUpdate(repo_id string, id string, item string) error
-	Get(repo_id string, id string) (string, error)
+	CreateOrUpdate(repoID string, id string, item string) error
+	Get(repoID string, id string) (string, error)
 	AddStorage(id string, repo any) error
 	Dump() string
 }
@@ -76,15 +76,15 @@ func (a *app) initRepo() {
 		a.repo = memrepository.New()
 	}
 
-	a.repo.AddStorage(COUNTER, counterStorage)
-	a.repo.AddStorage(GAUGE, gaugeStorage)
+	a.repo.AddStorage(Counter, counterStorage)
+	a.repo.AddStorage(Gauge, gaugeStorage)
 }
 
 func (a *app) initHandlers() {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc(ROOT_URL, http.NotFound)
-	mux.HandleFunc(UPDATE_URL, handlers.CreateOrUpdate(a.repo))
+	mux.HandleFunc(RootURL, http.NotFound)
+	mux.HandleFunc(UpdateURL, handlers.CreateOrUpdate(a.repo))
 	//Я так и не понял, какого ляду это так работает если честно
 	mux.HandleFunc("/update", http.NotFound)
 

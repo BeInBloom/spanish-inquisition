@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	CONFIG_ENV          = "CONFIG_PATH"
-	DEFAULT_CONFIG_PATH = "./config/config.yaml"
+	ConfigEnv         = "CONFIG_PATH"
+	DefaultConfigPath = "./config/config.yaml"
 )
 
 type Config struct {
@@ -37,9 +37,9 @@ type DatabaseConfig struct{}
 func New() *Config {
 	const fn = "cfg.New"
 
-	configPath := os.Getenv(CONFIG_ENV)
+	configPath := os.Getenv(ConfigEnv)
 	if configPath == "" {
-		configPath = DEFAULT_CONFIG_PATH
+		configPath = DefaultConfigPath
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
