@@ -35,7 +35,7 @@ type AppConfig struct {
 // TODO: переделать это говно
 type SaverConfig struct {
 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
-	Url     string        `yaml:"url" json:"url"`
+	URL     string        `yaml:"url" json:"url"`
 }
 
 type ClientConfig struct {

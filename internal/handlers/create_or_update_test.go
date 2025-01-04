@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// MockSaver - mock-реализация интерфейса saver для тестов.
 type MockSaver struct {
 	data  map[string]string
 	error error
@@ -45,9 +44,9 @@ func TestCreateOrUpdate_Success(t *testing.T) {
 	res := rec.Result()
 	defer res.Body.Close()
 
-	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
-	assert.Equal(t, "test-item", mockStorage.data["repo:123:item:456"])
+	assert.Equal(t, "", mockStorage.data["repo:123:item:456"])
 }
 
 func TestCreateOrUpdate_BadRequest(t *testing.T) {

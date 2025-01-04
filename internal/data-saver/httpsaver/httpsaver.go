@@ -18,7 +18,7 @@ func New(config config.SaverConfig) *httpSaver {
 		client: &http.Client{
 			Timeout: config.Timeout,
 		},
-		urlToSend: config.Url,
+		urlToSend: config.URL,
 	}
 }
 

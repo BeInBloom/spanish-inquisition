@@ -12,7 +12,6 @@ import (
 )
 
 func TestHttpSaver_Save_Success(t *testing.T) {
-	// Создаем mock-сервер
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "text/plain", r.Header.Get("Content-Type"))
@@ -23,7 +22,7 @@ func TestHttpSaver_Save_Success(t *testing.T) {
 	// Конфигурация saver
 	saverConfig := config.SaverConfig{
 		Timeout: 2 * time.Second,
-		Url:     mockServer.URL + "/%s/%s/%s",
+		URL:     mockServer.URL + "/%s/%s/%s",
 	}
 
 	saver := New(saverConfig)
@@ -39,16 +38,14 @@ func TestHttpSaver_Save_Success(t *testing.T) {
 }
 
 func TestHttpSaver_Save_HttpError(t *testing.T) {
-	// Mock-сервер, который эмулирует ошибку
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}))
 	defer mockServer.Close()
 
-	// Конфигурация saver
 	saverConfig := config.SaverConfig{
 		Timeout: 2 * time.Second,
-		Url:     mockServer.URL + "/%s/%s/%s",
+		URL:     mockServer.URL + "/%s/%s/%s",
 	}
 
 	saver := New(saverConfig)
@@ -65,16 +62,14 @@ func TestHttpSaver_Save_HttpError(t *testing.T) {
 }
 
 func TestHttpSaver_Save_Timeout(t *testing.T) {
-	// Mock-сервер, который вызывает таймаут
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(3 * time.Second)
 	}))
 	defer mockServer.Close()
 
-	// Конфигурация saver с коротким таймаутом
 	saverConfig := config.SaverConfig{
 		Timeout: 1 * time.Second,
-		Url:     mockServer.URL + "/%s/%s/%s",
+		URL:     mockServer.URL + "/%s/%s/%s",
 	}
 
 	saver := New(saverConfig)

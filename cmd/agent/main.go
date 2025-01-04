@@ -25,7 +25,7 @@ func main() {
 
 	saverConfig := config.SaverConfig{
 		Timeout: 10 * time.Second,
-		Url:     "http://localhost:8080/update/%s/%s/%s",
+		URL:     "http://localhost:8080/update/%s/%s/%s",
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
