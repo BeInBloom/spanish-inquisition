@@ -18,6 +18,7 @@ type asdfa interface {
 func GetRoot(repo asdfa) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metrics := repo.Dump()
+
 		tmpl, err := template.ParseFiles(templatePath)
 		if err != nil {
 			http.Error(w, "Error loading template", http.StatusInternalServerError)
