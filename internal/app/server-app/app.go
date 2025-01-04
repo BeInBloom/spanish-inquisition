@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/BeInBloom/spanish-inquisition/internal/config"
+	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/handlers"
 	"github.com/BeInBloom/spanish-inquisition/internal/repository/memrepository"
 	mapstorage "github.com/BeInBloom/spanish-inquisition/internal/storage"

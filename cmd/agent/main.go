@@ -1,14 +1,57 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"runtime/metrics"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	app "github.com/BeInBloom/spanish-inquisition/internal/app/client-app"
+	datafetcher "github.com/BeInBloom/spanish-inquisition/internal/app/data-fetcher"
+	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
+	"github.com/BeInBloom/spanish-inquisition/internal/data-saver/httpsaver"
 )
 
 func main() {
-	samples := metrics.All()
-
-	for _, s := range samples {
-		fmt.Printf("%v\n", s)
+	fetcherConf := config.FetcherConfig{
+		UpdateTime: 2,
 	}
+
+	appCong := config.AppConfig{
+		ReportInterval: 10,
+	}
+
+	saverConfig := config.SaverConfig{
+		Timeout: 10 * time.Second,
+		Url:     "http://localhost:8080/update/%s/%s/%s",
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	fetcher := datafetcher.New(ctx, fetcherConf.UpdateTime)
+	saver := httpsaver.New(saverConfig)
+
+	app := app.New(fetcher, saver, appCong)
+	app.Init(ctx)
+
+	fmt.Println("Agent started")
+
+	errChn := make(chan error, 1)
+	go func() {
+		if err := app.Run(); err != nil {
+			errChn <- err
+			panic(err)
+		}
+	}()
+
+	sysCalls := make(chan os.Signal, 1)
+	signal.Notify(sysCalls, syscall.SIGINT, syscall.SIGTERM)
+	<-sysCalls
+
+	cancel()
+
+	fmt.Println("Agent stopped")
+
 }

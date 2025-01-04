@@ -7,7 +7,7 @@ import (
 	"syscall"
 
 	app "github.com/BeInBloom/spanish-inquisition/internal/app/server-app"
-	"github.com/BeInBloom/spanish-inquisition/internal/config"
+	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 )
 
 func main() {

@@ -1,14 +1,17 @@
 package helpers
 
-import "strings"
+import (
+	"math/rand/v2"
+	"strings"
+)
 
 func GetParams(path string) []string {
-	return filter(strings.Split(path, "/"), func(s string) bool {
+	return Filter(strings.Split(path, "/"), func(s string) bool {
 		return s != ""
 	})
 }
 
-func filter[T any](slice []T, f func(T) bool) []T {
+func Filter[T any](slice []T, f func(T) bool) []T {
 	result := make([]T, 0)
 
 	for _, item := range slice {
@@ -18,4 +21,8 @@ func filter[T any](slice []T, f func(T) bool) []T {
 	}
 
 	return result
+}
+
+func GetRandomFloat(min, max float64) float64 {
+	return min + (max-min)*rand.Float64()
 }
