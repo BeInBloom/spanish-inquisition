@@ -10,6 +10,9 @@ import (
 	"github.com/BeInBloom/spanish-inquisition/internal/handlers"
 	"github.com/BeInBloom/spanish-inquisition/internal/repository/memrepository"
 	mapstorage "github.com/BeInBloom/spanish-inquisition/internal/storage"
+	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 )
 
 const (
@@ -23,7 +26,7 @@ type repository interface {
 	CreateOrUpdate(repoID string, id string, item string) error
 	Get(repoID string, id string) (string, error)
 	AddStorage(id string, repo any) error
-	Dump() string
+	Dump() []ptypes.Metrics
 }
 
 type app struct {
@@ -81,12 +84,23 @@ func (a *app) initRepo() {
 }
 
 func (a *app) initHandlers() {
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
 
-	mux.HandleFunc(RootURL, http.NotFound)
-	mux.HandleFunc(UpdateURL, handlers.CreateOrUpdate(a.repo))
-	//Я так и не понял, какого ляду это так работает если честно
-	mux.HandleFunc("/update", http.NotFound)
+	r.Use(
+		middleware.RequestID,
+		middleware.RealIP,
+		middleware.Recoverer,
+	)
+	//http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
+	//GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
+	r.Route("/", func(r chi.Router) {
+		r.Get("/", handlers.GetRoot(a.repo))
+		r.Get("/value/{type}/{name}", handlers.GetData(a.repo))
+		r.Route("/update", func(r chi.Router) {
+			r.With(middleware.AllowContentType("text/plain")).Post("/{type}/{name}/{value}", handlers.CreateOrUpdate(a.repo))
+			// r.Get("/{type}/{name}", handlers.GetData(a.repo))
+		})
+	})
 
-	a.server.Handler = mux
+	a.server.Handler = r
 }

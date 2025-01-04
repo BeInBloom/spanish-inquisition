@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 )
 
 var (
@@ -15,7 +17,7 @@ var (
 type repository[T any] interface {
 	Create(id string, item T) error
 	Get(id string) (T, error)
-	Dump() string
+	Dump() []ptypes.Metric
 }
 
 type Gauge = float64
@@ -123,15 +125,21 @@ func (m *memRepository) createCounter(repo repository[Counter], id, item string)
 	return repo.Create(id, Counter(num))
 }
 
-func (m *memRepository) Dump() string {
-	var result string
+func (m *memRepository) Dump() []ptypes.Metrics {
+	var result []ptypes.Metrics
 
 	for repoID, repo := range m.data {
 		switch repo := repo.(type) {
 		case repository[Gauge]:
-			result += fmt.Sprintf("%v:\n%v\n", repoID, repo.Dump())
+			result = append(result, ptypes.Metrics{
+				Type:   repoID,
+				Values: repo.Dump(),
+			})
 		case repository[Counter]:
-			result += fmt.Sprintf("%v:\n%v\n", repoID, repo.Dump())
+			result = append(result, ptypes.Metrics{
+				Type:   repoID,
+				Values: repo.Dump(),
+			})
 		}
 	}
 

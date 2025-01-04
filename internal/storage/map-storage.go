@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+
+	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 )
 
 var (
@@ -40,14 +42,17 @@ func (s *storage[T]) Get(id string) (T, error) {
 	return value, nil
 }
 
-func (s *storage[T]) Dump() string {
+func (s *storage[T]) Dump() []ptypes.Metric {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var result string
+	var result []ptypes.Metric
 
 	for id, item := range s.data {
-		result += fmt.Sprintf("%v: %v\n", id, item)
+		result = append(result, ptypes.Metric{
+			Name:  id,
+			Value: fmt.Sprintf("%v", item),
+		})
 	}
 
 	return result
