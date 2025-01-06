@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
 )
@@ -28,10 +29,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Address string `yaml:"address" json:"address"`
+	Address string `yaml:"address" json:"address" env:"ADDRESS"`
 	// Port        int           `yaml:"port" json:"port"`
-	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
+	Timeout     time.Duration `yaml:"timeout" json:"timeout" env:"TIMEOUT"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" json:"idle_timeout" env:"IDLE_TIMEOUT"`
 }
 
 type EnvConfig struct {
@@ -45,7 +46,7 @@ func New() *Config {
 
 	configPath := os.Getenv(ConfigEnv)
 	if configPath == "" {
-		return parseConfigFromFlags()
+		return getEnvAndFlagConfig()
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -110,4 +111,31 @@ func parseConfigFromFlags() *Config {
 	}
 
 	return &config
+}
+
+func checkEnvConfig(config *ServerConfig) {
+	var envConfig ServerConfig
+
+	if err := env.Parse(&envConfig); err != nil {
+		return
+	}
+
+	if envConfig.Address != "" {
+		config.Address = envConfig.Address
+	}
+
+	if envConfig.Timeout != 0 {
+		config.Timeout = envConfig.Timeout
+	}
+
+	if envConfig.IdleTimeout != 0 {
+		config.IdleTimeout = envConfig.IdleTimeout
+	}
+}
+
+func getEnvAndFlagConfig() *Config {
+	config := parseConfigFromFlags()
+	checkEnvConfig(&config.ServerConfig)
+
+	return config
 }

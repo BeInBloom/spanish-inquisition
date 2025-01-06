@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +23,7 @@ const (
 
 type Config struct {
 	SaverConfig  SaverConfig `yaml:"saver" json:"saver"`
-	PollInterval int         `yaml:"polling" json:"polling"`
+	PollInterval int         `yaml:"polling" json:"polling" env:"POLL_INTERVAL"`
 	AppConfig    AppConfig   `yaml:"app" json:"app"`
 }
 
@@ -40,12 +41,12 @@ type Config struct {
 
 // // TODO: переделать это говно
 type SaverConfig struct {
-	Timeout int    `yaml:"timeout" json:"timeout"`
-	URL     string `yaml:"url" json:"url"`
+	Timeout int    `yaml:"timeout" json:"timeout" env:"SAVER_TIMEOUT"`
+	URL     string `yaml:"url" json:"url" env:"ADDRESS"`
 }
 
 type AppConfig struct {
-	ReportInterval int `yaml:"report_interval" json:"report_interval"`
+	ReportInterval int `yaml:"report_interval" json:"report_interval" env:"REPORT_INTERVAL"`
 }
 
 // type ClientConfig struct {
@@ -57,7 +58,7 @@ func New() *Config {
 
 	configPath := os.Getenv(ConfigEnv)
 	if configPath == "" {
-		return parseConfigFromFlags()
+		return getEnvAndFlagConfig()
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -121,4 +122,34 @@ func parseConfigFromFlags() *Config {
 	}
 
 	return &config
+}
+
+func getEnvAndFlagConfig() *Config {
+	config := parseConfigFromFlags()
+	checkEnvConfig(config)
+	return config
+}
+
+func checkEnvConfig(config *Config) {
+	var envConfig Config
+
+	if err := env.Parse(&envConfig); err != nil {
+		return
+	}
+
+	if envConfig.PollInterval != 0 {
+		config.PollInterval = envConfig.PollInterval
+	}
+
+	if envConfig.AppConfig.ReportInterval != 0 {
+		config.AppConfig.ReportInterval = envConfig.AppConfig.ReportInterval
+	}
+
+	if envConfig.SaverConfig.Timeout != 0 {
+		config.SaverConfig.Timeout = envConfig.SaverConfig.Timeout
+	}
+
+	if envConfig.SaverConfig.URL != "" {
+		config.SaverConfig.URL = envConfig.SaverConfig.URL
+	}
 }
