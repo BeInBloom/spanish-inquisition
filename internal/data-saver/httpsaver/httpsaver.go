@@ -19,7 +19,8 @@ func New(config config.SaverConfig) *httpSaver {
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		urlToSend: config.URL + "/%s/%s/%s",
+		//Fix it
+		urlToSend: "http://" + config.URL + "/update/%s/%s/%s",
 	}
 }
 

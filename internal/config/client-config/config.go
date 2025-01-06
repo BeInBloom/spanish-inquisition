@@ -2,12 +2,17 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	ErrUnexpectedFlag = errors.New("unexpected flag")
 )
 
 const (
@@ -109,6 +114,11 @@ func parseConfigFromFlags() *Config {
 	pflag.IntVarP(&config.PollInterval, "poll-interval", "p", 10, "polling interval")
 	pflag.IntVarP(&config.SaverConfig.Timeout, "timeout", "t", 10, "timeout")
 	pflag.Parse()
+
+	if pflag.NArg() > 0 {
+		fmt.Printf("%s", ErrUnexpectedFlag)
+		os.Exit(1)
+	}
 
 	return &config
 }

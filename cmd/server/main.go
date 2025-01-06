@@ -14,8 +14,6 @@ func main() {
 	fmt.Printf("Read config...\n")
 	cfg := config.New()
 
-	fmt.Printf("config: %v\n", cfg)
-
 	fmt.Printf("Creating app...\n")
 	app := app.New(cfg.ServerConfig)
 	app.Init()
