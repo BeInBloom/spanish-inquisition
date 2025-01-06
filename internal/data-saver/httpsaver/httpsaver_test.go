@@ -21,7 +21,7 @@ func TestHttpSaver_Save_Success(t *testing.T) {
 
 	// Конфигурация saver
 	saverConfig := config.SaverConfig{
-		Timeout: 2 * time.Second,
+		Timeout: 2,
 		URL:     mockServer.URL + "/%s/%s/%s",
 	}
 
@@ -44,7 +44,7 @@ func TestHttpSaver_Save_HttpError(t *testing.T) {
 	defer mockServer.Close()
 
 	saverConfig := config.SaverConfig{
-		Timeout: 2 * time.Second,
+		Timeout: 2,
 		URL:     mockServer.URL + "/%s/%s/%s",
 	}
 
@@ -68,7 +68,7 @@ func TestHttpSaver_Save_Timeout(t *testing.T) {
 	defer mockServer.Close()
 
 	saverConfig := config.SaverConfig{
-		Timeout: 1 * time.Second,
+		Timeout: 1,
 		URL:     mockServer.URL + "/%s/%s/%s",
 	}
 
