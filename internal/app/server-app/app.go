@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -37,7 +36,7 @@ type app struct {
 func New(config config.ServerConfig) *app {
 	return &app{
 		server: &http.Server{
-			Addr:         fmt.Sprintf("%v:%v", config.Address, config.Port),
+			Addr:         config.Address,
 			Handler:      nil,
 			ReadTimeout:  config.Timeout,
 			WriteTimeout: config.Timeout,

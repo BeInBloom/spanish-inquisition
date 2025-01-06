@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	app "github.com/BeInBloom/spanish-inquisition/internal/app/client-app"
 	datafetcher "github.com/BeInBloom/spanish-inquisition/internal/app/data-fetcher"
@@ -15,25 +14,14 @@ import (
 )
 
 func main() {
-	fetcherConf := config.FetcherConfig{
-		UpdateTime: 2,
-	}
-
-	appCong := config.AppConfig{
-		ReportInterval: 10,
-	}
-
-	saverConfig := config.SaverConfig{
-		Timeout: 10 * time.Second,
-		URL:     "http://localhost:8080/update/%s/%s/%s",
-	}
+	cfg := config.New()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	fetcher := datafetcher.New(ctx, fetcherConf.UpdateTime)
-	saver := httpsaver.New(saverConfig)
+	fetcher := datafetcher.New(ctx, int64(cfg.PollInterval))
+	saver := httpsaver.New(cfg.SaverConfig)
 
-	app := app.New(fetcher, saver, appCong)
+	app := app.New(fetcher, saver, cfg.AppConfig)
 	app.Init(ctx)
 
 	fmt.Println("Agent started")

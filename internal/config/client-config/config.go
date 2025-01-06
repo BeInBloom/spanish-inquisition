@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
+	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,38 +16,43 @@ const (
 )
 
 type Config struct {
-	FetcherConfig `yaml:"fetcher" json:"fetcher"`
-	AppConfig     `yaml:"client" json:"client"`
+	SaverConfig  SaverConfig `yaml:"saver" json:"saver"`
+	PollInterval int         `yaml:"polling" json:"polling"`
+	AppConfig    AppConfig   `yaml:"app" json:"app"`
 }
 
-type FetcherConfig struct {
-	UpdateTime int64 `yaml:"update_time" json:"update_time"`
+// type FetcherConfig struct {
+// 	UpdateTime int64 `yaml:"update_time" json:"update_time"`
+// }
+
+// type AppConfig struct {
+// 	ReportInterval int64        `yaml:"report_interval" json:"report_interval"`
+// 	PollingRate    int64        `yaml:"polling_rate" json:"polling_rate"`
+// 	ReportURL      string       `yaml:"report_url" json:"report_url"`
+// 	ClientConfig   ClientConfig `yaml:"server" json:"server"`
+// 	SaverConfig    `yaml:"saver" json:"saver"`
+// }
+
+// // TODO: переделать это говно
+type SaverConfig struct {
+	Timeout int    `yaml:"timeout" json:"timeout"`
+	URL     string `yaml:"url" json:"url"`
 }
 
 type AppConfig struct {
-	ReportInterval int64        `yaml:"report_interval" json:"report_interval"`
-	PollingRate    int64        `yaml:"polling_rate" json:"polling_rate"`
-	ReportURL      string       `yaml:"report_url" json:"report_url"`
-	ClientConfig   ClientConfig `yaml:"server" json:"server"`
-	SaverConfig    `yaml:"saver" json:"saver"`
+	ReportInterval int `yaml:"report_interval" json:"report_interval"`
 }
 
-// TODO: переделать это говно
-type SaverConfig struct {
-	Timeout time.Duration `yaml:"timeout" json:"timeout"`
-	URL     string        `yaml:"url" json:"url"`
-}
-
-type ClientConfig struct {
-	Timeout time.Duration `yaml:"timeout" json:"timeout"`
-}
+// type ClientConfig struct {
+// 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
+// }
 
 func New() *Config {
 	const fn = "cfg.New"
 
 	configPath := os.Getenv(ConfigEnv)
 	if configPath == "" {
-		configPath = DefaultConfigPath
+		return parseConfigFromFlags()
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -92,6 +97,18 @@ func parseConfigFromYAML(configPath string) *Config {
 	if err := yaml.Unmarshal(file, &config); err != nil {
 		panic(fmt.Sprintf("%v: %v", fn, err))
 	}
+
+	return &config
+}
+
+func parseConfigFromFlags() *Config {
+	var config Config
+
+	pflag.StringVarP(&config.SaverConfig.URL, "address", "a", "localhost:8080", "server address")
+	pflag.IntVarP(&config.AppConfig.ReportInterval, "report-interval", "r", 10, "report interval")
+	pflag.IntVarP(&config.PollInterval, "poll-interval", "p", 10, "polling interval")
+	pflag.IntVarP(&config.SaverConfig.Timeout, "timeout", "t", 10, "timeout")
+	pflag.Parse()
 
 	return &config
 }

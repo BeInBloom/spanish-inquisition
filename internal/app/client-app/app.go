@@ -97,6 +97,6 @@ func New(fetcher dataFetcher, saver saver, config config.AppConfig) *app {
 	return &app{
 		saver:          saver,
 		fetcher:        fetcher,
-		reportInterval: config.ReportInterval,
+		reportInterval: int64(config.ReportInterval),
 	}
 }

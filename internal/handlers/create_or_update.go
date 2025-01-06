@@ -20,11 +20,11 @@ func CreateOrUpdate(storage saver) func(w http.ResponseWriter, r *http.Request) 
 
 		if err := storage.CreateOrUpdate(typeID, name, value); err != nil {
 			if errors.Is(err, mr.ErrRepoNotFound) {
-				http.Error(w, err.Error(), http.StatusNotFound)
+				http.Error(w, "not found", http.StatusNotFound)
 				return
 			}
 
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
 	}

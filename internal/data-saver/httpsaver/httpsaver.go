@@ -3,6 +3,7 @@ package httpsaver
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
 	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
@@ -16,9 +17,9 @@ type httpSaver struct {
 func New(config config.SaverConfig) *httpSaver {
 	return &httpSaver{
 		client: &http.Client{
-			Timeout: config.Timeout,
+			Timeout: 10 * time.Second,
 		},
-		urlToSend: config.URL,
+		urlToSend: config.URL + "/%s/%s/%s",
 	}
 }
 
