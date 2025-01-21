@@ -7,11 +7,13 @@ import (
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/handlers"
+	"github.com/BeInBloom/spanish-inquisition/internal/middlewares"
 	"github.com/BeInBloom/spanish-inquisition/internal/repository/memrepository"
 	mapstorage "github.com/BeInBloom/spanish-inquisition/internal/storage"
 	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 const (
@@ -31,9 +33,10 @@ type repository interface {
 type app struct {
 	server *http.Server
 	repo   repository
+	log    *zap.Logger
 }
 
-func New(config config.ServerConfig) *app {
+func New(config config.ServerConfig, log *zap.Logger) *app {
 	return &app{
 		server: &http.Server{
 			Addr:         config.Address,
@@ -43,6 +46,7 @@ func New(config config.ServerConfig) *app {
 			IdleTimeout:  config.IdleTimeout,
 		},
 		repo: nil,
+		log:  log,
 	}
 }
 
@@ -58,11 +62,15 @@ func (a *app) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 
-	if err := a.server.Shutdown(ctx); err != nil {
+	var err error
+
+	if err = a.server.Shutdown(ctx); err != nil {
 		return a.server.Close()
 	}
 
-	return nil
+	err = a.log.Sync()
+
+	return err
 }
 
 func (a *app) Init() {
@@ -88,6 +96,8 @@ func (a *app) initHandlers() {
 	r.Use(
 		middleware.RequestID,
 		middleware.RealIP,
+		middlewares.Logger(a.log.Sugar()),
+		middleware.Compress(5, "gzip"),
 		middleware.Recoverer,
 	)
 	//http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
