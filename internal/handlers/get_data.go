@@ -51,6 +51,7 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		m, err := makeGetResponse(data, value)
+
 		if err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
@@ -65,7 +66,7 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 
 func makeGetResponse(m models.Metrics, val string) (models.Metrics, error) {
 	switch m.MType {
-	case models.Gauge:
+	case "gauge":
 		num, err := strconv.ParseFloat(val, 64)
 		if err != nil {
 			return models.Metrics{}, err
@@ -76,7 +77,7 @@ func makeGetResponse(m models.Metrics, val string) (models.Metrics, error) {
 			MType: m.MType,
 			Value: &num,
 		}, nil
-	case models.Counter:
+	case "counter":
 		val, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			return models.Metrics{}, err
