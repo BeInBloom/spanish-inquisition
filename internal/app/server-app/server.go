@@ -104,8 +104,12 @@ func (a *app) initHandlers() {
 	//GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetRoot(a.repo))
-		r.Get("/value/{type}/{name}", handlers.GetData(a.repo))
+		r.Route("/value", func(r chi.Router) {
+			r.With(middleware.AllowContentType("application/json")).Get("/", handlers.GetDataByJSON(a.repo))
+			r.Get("/{type}/{name}", handlers.GetData(a.repo))
+		})
 		r.Route("/update", func(r chi.Router) {
+			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.CreateOrUpdateByJSON(a.repo))
 			r.With(middleware.AllowContentType("text/plain")).Post("/{type}/{name}/{value}", handlers.CreateOrUpdate(a.repo))
 			// r.Get("/{type}/{name}", handlers.GetData(a.repo))
 		})

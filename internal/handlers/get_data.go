@@ -22,6 +22,14 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		w.Header().Set("Content-Type", "text/plain")
+
 		w.Write([]byte(value))
+	}
+}
+
+func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		//TODO
 	}
 }
