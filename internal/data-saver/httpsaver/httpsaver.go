@@ -26,7 +26,7 @@ type httpSaver struct {
 func New(config config.SaverConfig) *httpSaver {
 	return &httpSaver{
 		client: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 100 * time.Second,
 		},
 		//Fix it
 		urlToSend: "http://" + config.URL + "/update/",
