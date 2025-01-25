@@ -149,7 +149,8 @@ func checkEnvConfig(config *Config) {
 		config.SaverConfig.Timeout = envConfig.SaverConfig.Timeout
 	}
 
-	if envConfig.SaverConfig.URL != "" {
-		config.SaverConfig.URL = envConfig.SaverConfig.URL
-	}
+	// if envConfig.SaverConfig.URL != "" {
+	//FIXME
+	config.SaverConfig.URL = "localhost:8080"
+	// }
 }

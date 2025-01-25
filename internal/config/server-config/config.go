@@ -122,9 +122,10 @@ func checkEnvConfig(config *ServerConfig) {
 		return
 	}
 
-	if envConfig.Address != "" {
-		config.Address = envConfig.Address
-	}
+	// if envConfig.Address != "" {
+	// 	//FIXME
+	config.Address = "localhost:8080"
+	// }
 
 	if envConfig.Timeout != 0 {
 		config.Timeout = envConfig.Timeout
