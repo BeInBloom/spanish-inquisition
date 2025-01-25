@@ -64,12 +64,12 @@ func (d *dataFetcher) start() {
 		return
 	}
 
-	// data, err := d.fetchAll()
-	// if err == nil {
-	// 	d.data = data
-	// }
+	data, err := d.fetchAll()
+	if err == nil {
+		d.data = data
+	}
 
-	ticker := time.NewTicker(time.Duration(d.timeToUpdate) * time.Second)
+	ticker := time.NewTicker(time.Duration(d.timeToUpdate) * time.Second / 10)
 
 	go func() {
 		defer func() {
