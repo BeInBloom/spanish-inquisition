@@ -3,7 +3,6 @@ package middlewares
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -42,7 +41,7 @@ func Logger(log *zap.SugaredLogger) func(h http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			bodyBytes, err := ioutil.ReadAll(r.Body)
+			bodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
 				log.Error("failed to read request body", "error", err)
 				http.Error(w, "internal server error", http.StatusInternalServerError)
