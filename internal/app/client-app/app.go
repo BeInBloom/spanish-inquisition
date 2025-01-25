@@ -36,7 +36,6 @@ func (a *app) Run() error {
 	fmt.Println("Sending data...")
 	if err := a.sendData(); err != nil {
 		fmt.Printf("Error sending data: %v\n", err)
-		return fmt.Errorf("%s: %v", fn, err)
 	}
 
 	ticker := time.NewTicker(time.Duration(a.reportInterval) * time.Second)
