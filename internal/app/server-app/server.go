@@ -2,16 +2,21 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"syscall"
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/handlers"
+	"github.com/BeInBloom/spanish-inquisition/internal/middlewares"
 	"github.com/BeInBloom/spanish-inquisition/internal/repository/memrepository"
 	mapstorage "github.com/BeInBloom/spanish-inquisition/internal/storage"
 	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 const (
@@ -31,9 +36,10 @@ type repository interface {
 type app struct {
 	server *http.Server
 	repo   repository
+	log    *zap.Logger
 }
 
-func New(config config.ServerConfig) *app {
+func New(config config.ServerConfig, log *zap.Logger) *app {
 	return &app{
 		server: &http.Server{
 			Addr:         config.Address,
@@ -43,6 +49,7 @@ func New(config config.ServerConfig) *app {
 			IdleTimeout:  config.IdleTimeout,
 		},
 		repo: nil,
+		log:  log,
 	}
 }
 
@@ -59,7 +66,16 @@ func (a *app) Close() error {
 	defer cancel()
 
 	if err := a.server.Shutdown(ctx); err != nil {
-		return a.server.Close()
+		if closeErr := a.server.Close(); closeErr != nil {
+			return fmt.Errorf("shutdown error: %v, close error: %v", err, closeErr)
+		}
+		return err
+	}
+
+	if err := a.log.Sync(); err != nil {
+		if !errors.Is(err, syscall.EINVAL) {
+			return err
+		}
 	}
 
 	return nil
@@ -88,14 +104,21 @@ func (a *app) initHandlers() {
 	r.Use(
 		middleware.RequestID,
 		middleware.RealIP,
+		middlewares.Logger(a.log.Sugar()),
+		middleware.Compress(5, "gzip"),
 		middleware.Recoverer,
 	)
 	//http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 	//GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetRoot(a.repo))
-		r.Get("/value/{type}/{name}", handlers.GetData(a.repo))
+		r.Route("/value", func(r chi.Router) {
+			r.With(middleware.AllowContentType("application/json")).Get("/", handlers.GetDataByJSON(a.repo))
+			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.GetDataByJSON(a.repo))
+			r.With(middleware.AllowContentType("text/plain")).Get("/{type}/{name}", handlers.GetData(a.repo))
+		})
 		r.Route("/update", func(r chi.Router) {
+			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.CreateOrUpdateByJSON(a.repo))
 			r.With(middleware.AllowContentType("text/plain")).Post("/{type}/{name}/{value}", handlers.CreateOrUpdate(a.repo))
 			// r.Get("/{type}/{name}", handlers.GetData(a.repo))
 		})
@@ -103,3 +126,5 @@ func (a *app) initHandlers() {
 
 	a.server.Handler = r
 }
+
+//какие-то абсолютно рандомные ошибки

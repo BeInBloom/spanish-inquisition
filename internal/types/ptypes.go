@@ -1,5 +1,10 @@
 package ptypes
 
+const (
+	Gauge   = "gauge"
+	Counter = "counter"
+)
+
 type SendData struct {
 	MetricType string
 	Name       string
