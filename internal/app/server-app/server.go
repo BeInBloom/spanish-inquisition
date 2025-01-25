@@ -65,16 +65,16 @@ func (a *app) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 
-	if shutdownErr := a.server.Shutdown(ctx); shutdownErr != nil {
+	if err := a.server.Shutdown(ctx); err != nil {
 		if closeErr := a.server.Close(); closeErr != nil {
-			return fmt.Errorf("shutdown error: %v, close error: %v", shutdownErr, closeErr)
+			return fmt.Errorf("shutdown error: %v, close error: %v", err, closeErr)
 		}
-		return shutdownErr
+		return err
 	}
 
-	if syncErr := a.log.Sync(); syncErr != nil {
-		if !errors.Is(syncErr, syscall.EINVAL) {
-			return syncErr
+	if err := a.log.Sync(); err != nil {
+		if !errors.Is(err, syscall.EINVAL) {
+			return err
 		}
 	}
 
