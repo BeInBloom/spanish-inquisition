@@ -27,18 +27,6 @@ type Config struct {
 	AppConfig    AppConfig   `yaml:"app" json:"app"`
 }
 
-// type FetcherConfig struct {
-// 	UpdateTime int64 `yaml:"update_time" json:"update_time"`
-// }
-
-// type AppConfig struct {
-// 	ReportInterval int64        `yaml:"report_interval" json:"report_interval"`
-// 	PollingRate    int64        `yaml:"polling_rate" json:"polling_rate"`
-// 	ReportURL      string       `yaml:"report_url" json:"report_url"`
-// 	ClientConfig   ClientConfig `yaml:"server" json:"server"`
-// 	SaverConfig    `yaml:"saver" json:"saver"`
-// }
-
 // // TODO: переделать это говно
 type SaverConfig struct {
 	Timeout int    `yaml:"timeout" json:"timeout" env:"SAVER_TIMEOUT"`
@@ -149,8 +137,7 @@ func checkEnvConfig(config *Config) {
 		config.SaverConfig.Timeout = envConfig.SaverConfig.Timeout
 	}
 
-	// if envConfig.SaverConfig.URL != "" {
-	//FIXME
-	config.SaverConfig.URL = "localhost:8080"
-	// }
+	if envConfig.SaverConfig.URL != "" {
+		config.SaverConfig.URL = envConfig.SaverConfig.URL
+	}
 }
