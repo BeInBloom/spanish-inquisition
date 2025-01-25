@@ -126,3 +126,5 @@ func (a *app) initHandlers() {
 
 	a.server.Handler = r
 }
+
+//какие-то абсолютно рандомные ошибки
