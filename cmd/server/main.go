@@ -22,7 +22,7 @@ func main() {
 
 	logger.Info("Logger initialized")
 
-	logger.Info("Starting server...")
+	logger.Info(fmt.Sprintf("Starting server on %s", cfg.ServerConfig.Address))
 	app := app.New(cfg.ServerConfig, logger)
 	app.Init()
 	logger.Info("Server initialized")

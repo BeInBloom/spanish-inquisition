@@ -37,10 +37,6 @@ type AppConfig struct {
 	ReportInterval int `yaml:"report_interval" json:"report_interval" env:"REPORT_INTERVAL"`
 }
 
-// type ClientConfig struct {
-// 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
-// }
-
 func New() *Config {
 	const fn = "cfg.New"
 
