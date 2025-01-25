@@ -58,8 +58,15 @@ func (d *dataFetcher) Fetch() ([]ptypes.SendData, error) {
 }
 
 func (d *dataFetcher) start() {
+	const fn = "dataFetcher.start"
+
 	if atomic.CompareAndSwapInt64(&d.running, 1, 0) {
 		return
+	}
+
+	data, err := d.fetchAll()
+	if err == nil {
+		d.data = data
 	}
 
 	ticker := time.NewTicker(time.Duration(d.timeToUpdate) * time.Second)
