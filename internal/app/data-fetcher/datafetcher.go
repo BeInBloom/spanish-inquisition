@@ -62,19 +62,6 @@ func (d *dataFetcher) start() {
 		return
 	}
 
-	data, err := d.fetchAll()
-
-	d.mutex.Lock()
-
-	if err != nil {
-		fmt.Printf("Error fetching data: %v\n", err)
-		d.data = nil
-	} else {
-		d.data = data
-	}
-
-	d.mutex.Unlock()
-
 	ticker := time.NewTicker(time.Duration(d.timeToUpdate) * time.Second)
 
 	go func() {
