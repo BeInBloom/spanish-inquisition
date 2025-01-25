@@ -69,7 +69,7 @@ func (d *dataFetcher) start() {
 		d.data = data
 	}
 
-	ticker := time.NewTicker(time.Duration(d.timeToUpdate) * time.Second / 10)
+	ticker := time.NewTicker(time.Duration(d.timeToUpdate) * time.Second)
 
 	go func() {
 		defer func() {
