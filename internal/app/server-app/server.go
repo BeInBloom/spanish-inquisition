@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"syscall"
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
@@ -62,15 +65,20 @@ func (a *app) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 
-	var err error
-
-	if err = a.server.Shutdown(ctx); err != nil {
-		return a.server.Close()
+	if shutdownErr := a.server.Shutdown(ctx); shutdownErr != nil {
+		if closeErr := a.server.Close(); closeErr != nil {
+			return fmt.Errorf("shutdown error: %v, close error: %v", shutdownErr, closeErr)
+		}
+		return shutdownErr
 	}
 
-	err = a.log.Sync()
+	if syncErr := a.log.Sync(); syncErr != nil {
+		if !errors.Is(syncErr, syscall.EINVAL) {
+			return syncErr
+		}
+	}
 
-	return err
+	return nil
 }
 
 func (a *app) Init() {
