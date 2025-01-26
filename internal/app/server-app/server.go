@@ -101,11 +101,8 @@ func (a *app) initRepo() {
 func (a *app) initHandlers() {
 	r := chi.NewRouter()
 
-	compressor := middleware.NewCompressor(5, "text/html", "application/json")
-	compressor.SetEncoder("gzip", nil)
-
 	r.Use(
-		compressor.Handler,
+		middlewares.Compressor(),
 		middleware.RequestID,
 		middleware.RealIP,
 		middlewares.Logger(a.log.Sugar()),
