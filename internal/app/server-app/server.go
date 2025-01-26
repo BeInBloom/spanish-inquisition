@@ -105,7 +105,7 @@ func (a *app) initHandlers() {
 		middleware.RequestID,
 		middleware.RealIP,
 		middlewares.Logger(a.log.Sugar()),
-		middleware.Compress(5, "gzip"),
+		middleware.Compress(5, "gzip", "br"),
 		middleware.Recoverer,
 	)
 	//http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
