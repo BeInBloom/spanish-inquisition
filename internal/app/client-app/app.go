@@ -33,6 +33,11 @@ func (a *app) Init(ctx context.Context) {
 func (a *app) Run() error {
 	const fn = "app.Run"
 
+	fmt.Println("Sending data...")
+	if err := a.sendData(); err != nil {
+		fmt.Printf("Error sending data: %v\n", err)
+	}
+
 	ticker := time.NewTicker(time.Duration(a.reportInterval) * time.Second)
 	defer ticker.Stop()
 
@@ -44,7 +49,6 @@ func (a *app) Run() error {
 			fmt.Println("Sending data...")
 			if err := a.sendData(); err != nil {
 				fmt.Printf("Error sending data: %v\n", err)
-				return fmt.Errorf("%s: %v", fn, err)
 			}
 		}
 	}

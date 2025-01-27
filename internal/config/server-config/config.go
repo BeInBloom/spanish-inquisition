@@ -103,6 +103,8 @@ func parseConfigFromFlags() *Config {
 	pflag.DurationVarP(&config.ServerConfig.Timeout, "timeout", "t", 10*time.Second, "server request timeout")
 	pflag.DurationVarP(&config.ServerConfig.IdleTimeout, "idle-timeout", "i", 10*time.Second, "server idle timeout")
 
+	pflag.StringVarP(&config.EnvConfig.Env, "env", "e", "dev", "environment")
+
 	pflag.Parse()
 
 	if pflag.NArg() > 0 {
