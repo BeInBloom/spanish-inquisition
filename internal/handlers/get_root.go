@@ -17,6 +17,8 @@ type dumper interface {
 
 func GetRoot(repo dumper) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+
 		metrics := repo.Dump()
 
 		tmpl, err := template.ParseFiles(templatePath)
@@ -29,7 +31,6 @@ func GetRoot(repo dumper) func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
 		}
 
-		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
 	}
 }

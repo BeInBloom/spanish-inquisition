@@ -16,7 +16,9 @@ type fetcher interface {
 
 func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
 		//Привязка к роутеру?
+
 		typeID := chi.URLParam(r, "type")
 		id := chi.URLParam(r, "name")
 
@@ -26,8 +28,6 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain")
-
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(value))
 	}
@@ -35,6 +35,8 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 
 func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
 		var data models.Metrics
 
 		decoder := json.NewDecoder(r.Body)
@@ -62,7 +64,6 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
 	}
 }
 

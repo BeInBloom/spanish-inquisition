@@ -39,6 +39,8 @@ func CreateOrUpdate(storage saver) func(w http.ResponseWriter, r *http.Request) 
 
 func CreateOrUpdateByJSON(storage saver) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
 		var data models.Metrics
 
 		decoder := json.NewDecoder(r.Body)
@@ -58,7 +60,6 @@ func CreateOrUpdateByJSON(storage saver) func(w http.ResponseWriter, r *http.Req
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
 
 		w.Write([]byte("{\"status\": \"ok\"}"))
 	}
