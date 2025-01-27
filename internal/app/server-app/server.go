@@ -102,7 +102,8 @@ func (a *app) initHandlers() {
 	r := chi.NewRouter()
 
 	r.Use(
-		middlewares.Compressor(),
+		// middlewares.Compressor(),
+		middleware.Compress(5, "gzip"),
 		middleware.RequestID,
 		middleware.RealIP,
 		middlewares.Logger(a.log.Sugar()),

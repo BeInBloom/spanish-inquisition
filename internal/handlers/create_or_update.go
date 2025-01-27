@@ -57,8 +57,8 @@ func CreateOrUpdateByJSON(storage saver) func(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "text/plain")
 
 		w.Write([]byte("ok"))
 	}

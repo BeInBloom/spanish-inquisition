@@ -28,6 +28,7 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "text/plain")
 
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(value))
 	}
 }
@@ -48,8 +49,6 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-
 		m, err := makeGetResponse(data, value)
 
 		if err != nil {
@@ -61,6 +60,9 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
 	}
 }
 
