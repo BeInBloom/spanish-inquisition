@@ -28,8 +28,9 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
-	//TODO: fix me
-	c.w.Header().Set("Content-Encoding", "gzip")
+	if statusCode < 300 {
+		c.w.Header().Set("Content-Encoding", "gzip")
+	}
 	c.w.WriteHeader(statusCode)
 }
 
@@ -65,38 +66,60 @@ func (c *compressReader) Close() error {
 	if err := c.r.Close(); err != nil {
 		return err
 	}
-
 	return c.zr.Close()
 }
 
-func Compressor() func(h http.Handler) http.Handler {
-	return func(h http.Handler) http.Handler {
-		compFn := func(w http.ResponseWriter, r *http.Request) {
-			ow := w
-			acceptEncoding := r.Header.Get("Accept-Encoding")
-			supportsGzip := strings.Contains(acceptEncoding, "gzip")
-			if supportsGzip {
-				cw := newCompressWriter(w)
-				ow = cw
-				defer cw.Close()
-			}
+func Compress(h http.Handler) http.Handler {
+	compFn := func(w http.ResponseWriter, r *http.Request) {
+		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
+		// который будем передавать следующей функции
+		ow := w
 
-			contentEncoding := r.Header.Get("Content-Encoding")
-			sendsGzip := strings.Contains(contentEncoding, "gzip")
-			if sendsGzip {
-				cr, err := newCompressReader(r.Body)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-
-				r.Body = cr
-				defer cr.Close()
-			}
-
-			h.ServeHTTP(ow, r)
+		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		supportsGzip := strings.Contains(acceptEncoding, "gzip")
+		if supportsGzip {
+			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
+			cw := newCompressWriter(w)
+			// меняем оригинальный http.ResponseWriter на новый
+			ow = cw
+			// не забываем отправить клиенту все сжатые данные после завершения middleware
+			defer cw.Close()
 		}
 
-		return http.HandlerFunc(compFn)
+		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
+		contentEncoding := r.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+		if sendsGzip {
+			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
+			cr, err := newCompressReader(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			// меняем тело запроса на новое
+			r.Body = cr
+			defer cr.Close()
+		}
+
+		// передаём управление хендлеру
+		h.ServeHTTP(ow, r)
 	}
+
+	return http.HandlerFunc(compFn)
+}
+
+func GptTest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, "Failed to decompress request body", http.StatusBadRequest)
+				return
+			}
+			defer gz.Close()
+			r.Body = gz
+		}
+		next.ServeHTTP(w, r)
+	})
 }

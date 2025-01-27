@@ -29,9 +29,9 @@ func GetRoot(repo dumper) func(w http.ResponseWriter, r *http.Request) {
 
 		if err := tmpl.Execute(w, metrics); err != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
+			return
 		}
 
-		w.Header().Set("Content-Encoding", "gzip")
 		w.WriteHeader(http.StatusOK)
 	}
 }
