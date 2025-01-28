@@ -11,12 +11,14 @@ const (
 	templatePath = "./internal/template/index.html"
 )
 
-type asdfa interface {
+type dumper interface {
 	Dump() []ptypes.Metrics
 }
 
-func GetRoot(repo asdfa) func(w http.ResponseWriter, r *http.Request) {
+func GetRoot(repo dumper) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+
 		metrics := repo.Dump()
 
 		tmpl, err := template.ParseFiles(templatePath)
@@ -25,9 +27,11 @@ func GetRoot(repo asdfa) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/html")
 		if err := tmpl.Execute(w, metrics); err != nil {
 			http.Error(w, "Error rendering template", http.StatusInternalServerError)
+			return
 		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
