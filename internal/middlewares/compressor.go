@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+//TODO понять и переделать вот это все
+
 type compressWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
@@ -109,7 +111,7 @@ func Compress(h http.Handler) http.Handler {
 	return http.HandlerFunc(compFn)
 }
 
-func GptTest(next http.Handler) http.Handler {
+func Decomp(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			gz, err := gzip.NewReader(r.Body)
@@ -117,9 +119,11 @@ func GptTest(next http.Handler) http.Handler {
 				http.Error(w, "Failed to decompress request body", http.StatusBadRequest)
 				return
 			}
+
 			defer gz.Close()
 			r.Body = gz
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }

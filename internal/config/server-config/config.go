@@ -33,13 +33,17 @@ type ServerConfig struct {
 	// Port        int           `yaml:"port" json:"port"`
 	Timeout     time.Duration `yaml:"timeout" json:"timeout" env:"TIMEOUT"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" json:"idle_timeout" env:"IDLE_TIMEOUT"`
+	Restore     bool          `yaml:"restore" json:"restore" env:"RESTORE"`
 }
 
 type EnvConfig struct {
 	Env string `yaml:"env" json:"env"`
 }
 
-type DatabaseConfig struct{}
+type DatabaseConfig struct {
+	Path          string `yaml:"path" json:"path" env:"FILE_STORAGE_PATH"`
+	StoreInterval int    `yaml:"store_interval" json:"store_interval" env:"STORE_INTERVAL"`
+}
 
 func New() *Config {
 	const fn = "cfg.New"
@@ -102,8 +106,13 @@ func parseConfigFromFlags() *Config {
 	// pflag.IntVarP(&config.ServerConfig.Port, "port", "p", 8080, "server port")
 	pflag.DurationVarP(&config.ServerConfig.Timeout, "timeout", "t", 10*time.Second, "server request timeout")
 	pflag.DurationVarP(&config.ServerConfig.IdleTimeout, "idle-timeout", "i", 10*time.Second, "server idle timeout")
+	pflag.BoolVarP(&config.ServerConfig.Restore, "restore", "r", true, "restore database")
 
 	pflag.StringVarP(&config.EnvConfig.Env, "env", "e", "dev", "environment")
+
+	pflag.StringVarP(&config.DatabaseConfig.Path, "db-path", "d", "./pesiks_better_then_kitiks.txt", "database path")
+	//TODO не забыть вернуть 300 у тракториста
+	pflag.IntVarP(&config.DatabaseConfig.StoreInterval, "store-interval", "s", 300, "store interval")
 
 	pflag.Parse()
 
@@ -115,7 +124,7 @@ func parseConfigFromFlags() *Config {
 	return &config
 }
 
-func checkEnvConfig(config *ServerConfig) {
+func checkEnvServerConfig(config *ServerConfig) {
 	var envConfig ServerConfig
 
 	if err := env.Parse(&envConfig); err != nil {
@@ -133,11 +142,33 @@ func checkEnvConfig(config *ServerConfig) {
 	if envConfig.IdleTimeout != 0 {
 		config.IdleTimeout = envConfig.IdleTimeout
 	}
+
+	if envConfig.Restore {
+		config.Restore = envConfig.Restore
+	}
+}
+
+func checkEnvDatabaseConfig(config *DatabaseConfig) {
+	var envConfig DatabaseConfig
+
+	if err := env.Parse(&envConfig); err != nil {
+		return
+	}
+
+	if envConfig.Path != "" {
+		config.Path = envConfig.Path
+	}
+
+	//TODO потенциальная проблема
+	if envConfig.StoreInterval != 0 {
+		config.StoreInterval = envConfig.StoreInterval
+	}
 }
 
 func getEnvAndFlagConfig() *Config {
 	config := parseConfigFromFlags()
-	checkEnvConfig(&config.ServerConfig)
+	checkEnvServerConfig(&config.ServerConfig)
+	checkEnvDatabaseConfig(&config.DatabaseConfig)
 
 	return config
 }

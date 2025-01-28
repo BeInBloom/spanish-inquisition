@@ -11,8 +11,6 @@ import (
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/handlers"
 	"github.com/BeInBloom/spanish-inquisition/internal/middlewares"
-	"github.com/BeInBloom/spanish-inquisition/internal/repository/memrepository"
-	mapstorage "github.com/BeInBloom/spanish-inquisition/internal/storage"
 	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
@@ -39,7 +37,7 @@ type app struct {
 	log    *zap.Logger
 }
 
-func New(config config.ServerConfig, log *zap.Logger) *app {
+func New(config config.ServerConfig, log *zap.Logger, repo repository) *app {
 	return &app{
 		server: &http.Server{
 			Addr:         config.Address,
@@ -48,7 +46,7 @@ func New(config config.ServerConfig, log *zap.Logger) *app {
 			WriteTimeout: config.Timeout,
 			IdleTimeout:  config.IdleTimeout,
 		},
-		repo: nil,
+		repo: repo,
 		log:  log,
 	}
 }
@@ -87,32 +85,26 @@ func (a *app) Init() {
 }
 
 func (a *app) initRepo() {
-	counterStorage := mapstorage.NewCounterStorage()
-	gaugeStorage := mapstorage.NewCommonStorage[memrepository.Gauge]()
+	// counterStorage := mapstorage.NewCounterStorage()
+	// gaugeStorage := mapstorage.NewCommonStorage[memrepository.Gauge]()
 
-	if a.repo == nil {
-		a.repo = memrepository.New()
-	}
-
-	a.repo.AddStorage(Counter, counterStorage)
-	a.repo.AddStorage(Gauge, gaugeStorage)
+	// a.repo.AddStorage(Counter, counterStorage)
+	// a.repo.AddStorage(Gauge, gaugeStorage)
 }
 
 func (a *app) initHandlers() {
 	r := chi.NewRouter()
 
 	r.Use(
-		// middlewares.Compress,
 		middleware.Compress(5, "application/json", "text/html"),
-		middlewares.GptTest,
+		middlewares.Decomp,
 
 		middleware.RequestID,
 		middleware.RealIP,
 		middlewares.Logger(a.log.Sugar()),
 		middleware.Recoverer,
 	)
-	//http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	//GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
+
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetRoot(a.repo))
 		r.Route("/value", func(r chi.Router) {
@@ -123,11 +115,8 @@ func (a *app) initHandlers() {
 		r.Route("/update", func(r chi.Router) {
 			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.CreateOrUpdateByJSON(a.repo))
 			r.With(middleware.AllowContentType("text/plain")).Post("/{type}/{name}/{value}", handlers.CreateOrUpdate(a.repo))
-			// r.Get("/{type}/{name}", handlers.GetData(a.repo))
 		})
 	})
 
 	a.server.Handler = r
 }
-
-//какие-то абсолютно рандомные ошибки
