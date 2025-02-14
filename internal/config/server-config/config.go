@@ -115,11 +115,11 @@ func parseConfigFromFlags() *Config {
 
 	pflag.StringVarP(&config.EnvConfig.Env, "env", "e", "dev", "environment")
 
-	pflag.StringVarP(&config.BakConfig.Path, "db-path", "d", "./pesiks_better_then_kitiks.txt", "database path")
+	pflag.StringVarP(&config.BakConfig.Path, "db-path", "f", "./pesiks_better_then_kitiks.txt", "database path")
 	pflag.IntVarP(&config.BakConfig.StoreInterval, "store-interval", "s", 300, "store interval")
 
 	pflag.StringVarP(&config.DBConfig.Address, "db-address", "d", "", "database address")
-	pflag.StringVarP(&config.DBConfig.DriverName, "db-driver", "driver", "pgx", "database driver")
+	pflag.StringVarP(&config.DBConfig.DriverName, "db-driver", "D", "pgx", "database driver")
 
 	pflag.Parse()
 
