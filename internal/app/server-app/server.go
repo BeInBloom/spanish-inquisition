@@ -11,7 +11,7 @@ import (
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/handlers"
 	"github.com/BeInBloom/spanish-inquisition/internal/middlewares"
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -25,10 +25,10 @@ const (
 )
 
 type repository interface {
-	CreateOrUpdate(repoID string, id string, item string) error
-	Get(repoID string, id string) (string, error)
-	AddStorage(id string, repo any) error
-	Dump() []ptypes.Metrics
+	CreateOrUpdate(models.Metrics) error
+	Get(models.Metrics) (string, error)
+	Dump() ([]models.Metrics, error)
+	Check() error
 }
 
 type app struct {
@@ -80,16 +80,7 @@ func (a *app) Close() error {
 }
 
 func (a *app) Init() {
-	a.initRepo()
 	a.initHandlers()
-}
-
-func (a *app) initRepo() {
-	// counterStorage := mapstorage.NewCounterStorage()
-	// gaugeStorage := mapstorage.NewCommonStorage[memrepository.Gauge]()
-
-	// a.repo.AddStorage(Counter, counterStorage)
-	// a.repo.AddStorage(Gauge, gaugeStorage)
 }
 
 func (a *app) initHandlers() {
@@ -107,6 +98,9 @@ func (a *app) initHandlers() {
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetRoot(a.repo))
+		r.Route("/ping", func(r chi.Router) {
+			r.Get("/", handlers.Ping(a.repo))
+		})
 		r.Route("/value", func(r chi.Router) {
 			r.With(middleware.AllowContentType("application/json")).Get("/", handlers.GetDataByJSON(a.repo))
 			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.GetDataByJSON(a.repo))

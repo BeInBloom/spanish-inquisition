@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 	mapstorage "github.com/BeInBloom/spanish-inquisition/internal/storage"
 	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 )
@@ -33,8 +33,8 @@ type Gauge = float64
 type Counter = int64
 
 type backuper interface {
-	Save([]ptypes.Metrics) error
-	Restore() ([]ptypes.Metrics, error)
+	Save([]models.Metrics) error
+	Restore() ([]models.Metrics, error)
 }
 
 type memRepository struct {
@@ -76,13 +76,13 @@ func (m *memRepository) Get(repoID string, id string) (string, error) {
 	}
 }
 
-func (m *memRepository) Dump() []ptypes.Metrics {
-	var result []ptypes.Metrics
+func (m *memRepository) Dump() []models.Metrics {
+	var result []models.Metrics
 
 	for repoID, repo := range m.data {
 		switch repo := repo.(type) {
 		case repository[Gauge]:
-			result = append(result, ptypes.Metrics{
+			result = append(result, models.Metrics{
 				Type:   repoID,
 				Values: repo.Dump(),
 			})
@@ -97,21 +97,25 @@ func (m *memRepository) Dump() []ptypes.Metrics {
 	return result
 }
 
-func (m *memRepository) CreateOrUpdate(repoID string, id string, item string) error {
+func (m *memRepository) CreateOrUpdate(metric models.Metrics) error {
 	const fn = "MemStorage.CreateOrUpdate"
 
-	repo, ok := m.data[repoID]
+	repo, ok := m.data[metric.MType]
 	if !ok {
 		return ErrNotCorrectMetricType
 	}
 
+	if err := m.validateMetric(metric); err != nil {
+		return err
+	}
+
 	switch repo := repo.(type) {
 	case repository[Gauge]:
-		if err := m.createGauge(repo, id, item); err != nil {
+		if err := m.createGauge(repo, metric.ID, *metric.Value); err != nil {
 			return err
 		}
 	case repository[Counter]:
-		if err := m.createCounter(repo, id, item); err != nil {
+		if err := m.createCounter(repo, metric.ID, *metric.Delta); err != nil {
 			return err
 		}
 	default:
@@ -129,6 +133,16 @@ func (m *memRepository) CreateOrUpdate(repoID string, id string, item string) er
 	}
 
 	return nil
+}
+
+func (m *memRepository) Close() error {
+	return nil
+}
+
+func (m *memRepository) Init(ctx context.Context) {
+	if m.storeInterval > 0 {
+		m.startBackup(ctx)
+	}
 }
 
 func (m *memRepository) getCounter(repo repository[Counter], id string) (string, error) {
@@ -153,26 +167,31 @@ func (m *memRepository) getGauge(repo repository[Gauge], id string) (string, err
 	return fmt.Sprintf("%v", f), nil
 }
 
-func (m *memRepository) createGauge(repo repository[Gauge], id, item string) error {
-	const fn = "MemStorage.createGauge"
-
-	f, err := strconv.ParseFloat(item, 64)
-	if err != nil {
-		return ErrNotCorrectType
+func (m *memRepository) validateMetric(metric models.Metrics) error {
+	switch metric.MType {
+	case gauge:
+		if metric.Value == nil {
+			return ErrNotCorrectMetricType
+		}
+	case counter:
+		if metric.Delta == nil {
+			return ErrNotCorrectMetricType
+		}
+	default:
+		return ErrNotCorrectMetricType
 	}
-
-	return repo.Create(id, Gauge(f))
 }
 
-func (m *memRepository) createCounter(repo repository[Counter], id, item string) error {
+func (m *memRepository) createGauge(repo repository[Gauge], id string, item float64) error {
+	const fn = "MemStorage.createGauge"
+
+	return repo.Create(id, Gauge(item))
+}
+
+func (m *memRepository) createCounter(repo repository[Counter], id string, delta int64) error {
 	const fn = "MemStorage.createCounter"
 
-	num, err := strconv.Atoi(item)
-	if err != nil {
-		return ErrNotCorrectType
-	}
-
-	return repo.Create(id, Counter(num))
+	return repo.Create(id, Counter(delta))
 }
 
 func (m *memRepository) restoreFromBak() error {
@@ -213,6 +232,8 @@ func (m *memRepository) startBackup(ctx context.Context) error {
 	ticker := time.NewTicker(m.storeInterval)
 
 	go func() {
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -224,6 +245,7 @@ func (m *memRepository) startBackup(ctx context.Context) error {
 				}
 			}
 		}
+
 	}()
 
 	return nil
@@ -244,10 +266,6 @@ func New(ctx context.Context, config *config.Config, bak backuper) *memRepositor
 
 	if config.Restore {
 		memRepository.restoreFromBak()
-	}
-
-	if memRepository.storeInterval > 0 {
-		memRepository.startBackup(ctx)
 	}
 
 	return memRepository

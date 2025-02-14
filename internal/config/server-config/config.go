@@ -23,9 +23,14 @@ const (
 )
 
 type Config struct {
-	ServerConfig   `yaml:"server" json:"server"`
-	EnvConfig      `yaml:"env" json:"env"`
-	DatabaseConfig `yaml:"database" json:"database"`
+	ServerConfig `yaml:"server" json:"server"`
+	EnvConfig    `yaml:"env" json:"env"`
+	DBConfig     `yaml:"database" json:"database"`
+}
+
+type DBConfig struct {
+	Address   string `yaml:"address" json:"address" env:"DATABASE_DSN"`
+	BakConfig `yaml:"bakconfig" json:"bakconfig"`
 }
 
 type ServerConfig struct {
@@ -40,7 +45,7 @@ type EnvConfig struct {
 	Env string `yaml:"env" json:"env"`
 }
 
-type DatabaseConfig struct {
+type BakConfig struct {
 	Path          string `yaml:"path" json:"path" env:"FILE_STORAGE_PATH"`
 	StoreInterval int    `yaml:"store_interval" json:"store_interval" env:"STORE_INTERVAL"`
 }
@@ -103,16 +108,15 @@ func parseConfigFromFlags() *Config {
 	var config Config
 
 	pflag.StringVarP(&config.ServerConfig.Address, "address", "a", "localhost:8080", "server address")
-	// pflag.IntVarP(&config.ServerConfig.Port, "port", "p", 8080, "server port")
 	pflag.DurationVarP(&config.ServerConfig.Timeout, "timeout", "t", 10*time.Second, "server request timeout")
 	pflag.DurationVarP(&config.ServerConfig.IdleTimeout, "idle-timeout", "i", 10*time.Second, "server idle timeout")
 	pflag.BoolVarP(&config.ServerConfig.Restore, "restore", "r", true, "restore database")
 
 	pflag.StringVarP(&config.EnvConfig.Env, "env", "e", "dev", "environment")
 
-	pflag.StringVarP(&config.DatabaseConfig.Path, "db-path", "d", "./pesiks_better_then_kitiks.txt", "database path")
-	//TODO не забыть вернуть 300 у тракториста
-	pflag.IntVarP(&config.DatabaseConfig.StoreInterval, "store-interval", "s", 300, "store interval")
+	pflag.StringVarP(&config.BakConfig.Path, "db-path", "d", "./pesiks_better_then_kitiks.txt", "database path")
+	pflag.IntVarP(&config.BakConfig.StoreInterval, "store-interval", "s", 300, "store interval")
+	pflag.StringVarP(&config.DBConfig.Address, "db-address", "d", "", "database address")
 
 	pflag.Parse()
 
@@ -148,8 +152,8 @@ func checkEnvServerConfig(config *ServerConfig) {
 	}
 }
 
-func checkEnvDatabaseConfig(config *DatabaseConfig) {
-	var envConfig DatabaseConfig
+func checkEnvBakConfig(config *BakConfig) {
+	var envConfig BakConfig
 
 	if err := env.Parse(&envConfig); err != nil {
 		return
@@ -165,10 +169,23 @@ func checkEnvDatabaseConfig(config *DatabaseConfig) {
 	}
 }
 
+func checkEnvDatabaseConfig(config *DBConfig) {
+	var envConfig DBConfig
+
+	if err := env.Parse(&envConfig); err != nil {
+		return
+	}
+
+	if envConfig.Address != "" {
+		config.Address = envConfig.Address
+	}
+}
+
 func getEnvAndFlagConfig() *Config {
 	config := parseConfigFromFlags()
 	checkEnvServerConfig(&config.ServerConfig)
-	checkEnvDatabaseConfig(&config.DatabaseConfig)
+	checkEnvBakConfig(&config.BakConfig)
+	checkEnvDatabaseConfig(&config.DBConfig)
 
 	return config
 }
