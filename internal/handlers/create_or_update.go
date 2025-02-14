@@ -11,16 +11,23 @@ import (
 )
 
 type saver interface {
-	CreateOrUpdate(repoID string, id string, item string) error
+	CreateOrUpdate(models.Metrics) error
 }
 
 func CreateOrUpdate(storage saver) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		typeID := chi.URLParam(r, "type")
-		name := chi.URLParam(r, "name")
-		value := chi.URLParam(r, "value")
 
-		if err := storage.CreateOrUpdate(typeID, name, value); err != nil {
+		m, err := models.CreateMetricsByType(
+			chi.URLParam(r, "type"),
+			chi.URLParam(r, "name"),
+			chi.URLParam(r, "value"),
+		)
+		if err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		if err := storage.CreateOrUpdate(m); err != nil {
 			if errors.Is(err, mr.ErrRepoNotFound) {
 				http.Error(w, "not found", http.StatusNotFound)
 				return
@@ -49,7 +56,7 @@ func CreateOrUpdateByJSON(storage saver) func(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		if err := storage.CreateOrUpdate(models.ParseMetrics(data)); err != nil {
+		if err := storage.CreateOrUpdate(data); err != nil {
 			if errors.Is(err, mr.ErrRepoNotFound) {
 				http.Error(w, "not found", http.StatusNotFound)
 				return

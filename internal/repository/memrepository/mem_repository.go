@@ -7,9 +7,9 @@ import (
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
+	filestorage "github.com/BeInBloom/spanish-inquisition/internal/metric_storage/file_storage"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
 	mapstorage "github.com/BeInBloom/spanish-inquisition/internal/storage"
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 )
 
 const (
@@ -26,7 +26,7 @@ var (
 type repository[T any] interface {
 	Create(id string, item T) error
 	Get(id string) (T, error)
-	Dump() []ptypes.Metric
+	Dump() []models.Metrics
 }
 
 type Gauge = float64
@@ -38,9 +38,9 @@ type backuper interface {
 }
 
 type memRepository struct {
-	storeInterval time.Duration
-	data          map[string]any
-	bak           backuper
+	cfg  config.Config
+	data map[string]any
+	bak  backuper
 }
 
 func (m *memRepository) AddStorage(id string, repo any) error {
@@ -58,43 +58,37 @@ func (m *memRepository) AddStorage(id string, repo any) error {
 	return nil
 }
 
-func (m *memRepository) Get(repoID string, id string) (string, error) {
+func (m *memRepository) Get(metric models.Metrics) (string, error) {
 	const fn = "MemStorage.Get"
 
-	repo, ok := m.data[repoID]
+	repo, ok := m.data[metric.MType]
 	if !ok {
 		return "", ErrNotCorrectMetricType
 	}
 
 	switch repo := repo.(type) {
 	case repository[Gauge]:
-		return m.getGauge(repo, id)
+		return m.getGauge(repo, metric.ID)
 	case repository[Counter]:
-		return m.getCounter(repo, id)
+		return m.getCounter(repo, metric.ID)
 	default:
 		return "", ErrNotCorrectType
 	}
 }
 
-func (m *memRepository) Dump() []models.Metrics {
+func (m *memRepository) Dump() ([]models.Metrics, error) {
 	var result []models.Metrics
 
 	for repoID, repo := range m.data {
 		switch repo := repo.(type) {
 		case repository[Gauge]:
-			result = append(result, models.Metrics{
-				Type:   repoID,
-				Values: repo.Dump(),
-			})
+			result = append(result, m.getGaugeDump(repoID, repo)...)
 		case repository[Counter]:
-			result = append(result, ptypes.Metrics{
-				Type:   repoID,
-				Values: repo.Dump(),
-			})
+			result = append(result, m.getCounterDump(repoID, repo)...)
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 func (m *memRepository) CreateOrUpdate(metric models.Metrics) error {
@@ -126,7 +120,7 @@ func (m *memRepository) CreateOrUpdate(metric models.Metrics) error {
 	//Да, я понимаю, что буду сохранять полные состояния хранилища, хотя могу просто сохранить последовательность операций
 	//которые меняют состояние хранилища. Потом просто пройтись по этим операциям и востановить исходное состояние
 	//и писать json.NewEncoder. Будет время, переделаю
-	if m.storeInterval < 1 {
+	if time.Duration(m.cfg.StoreInterval)*time.Second < 1 {
 		if err := m.backup(); err != nil {
 			return fmt.Errorf("backup error: %v, %v", err, fn)
 		}
@@ -139,10 +133,65 @@ func (m *memRepository) Close() error {
 	return nil
 }
 
-func (m *memRepository) Init(ctx context.Context) {
-	if m.storeInterval > 0 {
-		m.startBackup(ctx)
+func (m *memRepository) Init(ctx context.Context) error {
+	const fn = "MemStorage.Init"
+
+	counterStorage := mapstorage.NewCounterStorage()
+	gaugeStorage := mapstorage.NewCommonStorage[Gauge]()
+
+	m.AddStorage(counter, counterStorage)
+	m.AddStorage(gauge, gaugeStorage)
+
+	bak, err := filestorage.New(m.cfg.BakConfig)
+	if err != nil {
+		return fmt.Errorf("%v: %v", fn, err)
 	}
+
+	m.bak = bak
+
+	if m.cfg.Restore {
+		if err := m.restoreFromBak(); err != nil {
+			return fmt.Errorf("%v: %v", fn, err)
+		}
+	}
+
+	if err := m.startBackup(ctx); err != nil {
+		return fmt.Errorf("%v: %v", fn, err)
+	}
+
+	return nil
+}
+
+func (m *memRepository) Check() error {
+	return nil
+}
+
+func (m *memRepository) getGaugeDump(repoID string, repo repository[Gauge]) []models.Metrics {
+	var result []models.Metrics
+
+	for _, item := range repo.Dump() {
+		result = append(result, models.Metrics{
+			MType: repoID,
+			ID:    item.ID,
+			Value: item.Value,
+		})
+	}
+
+	return result
+}
+
+func (m *memRepository) getCounterDump(repoID string, repo repository[Counter]) []models.Metrics {
+	var result []models.Metrics
+
+	for _, item := range repo.Dump() {
+		result = append(result, models.Metrics{
+			MType: repoID,
+			ID:    item.ID,
+			Delta: item.Delta,
+		})
+	}
+
+	return result
 }
 
 func (m *memRepository) getCounter(repo repository[Counter], id string) (string, error) {
@@ -180,6 +229,8 @@ func (m *memRepository) validateMetric(metric models.Metrics) error {
 	default:
 		return ErrNotCorrectMetricType
 	}
+
+	return nil
 }
 
 func (m *memRepository) createGauge(repo repository[Gauge], id string, item float64) error {
@@ -204,10 +255,9 @@ func (m *memRepository) restoreFromBak() error {
 	}
 
 	for _, item := range data {
-		for _, metric := range item.Values {
-			if err := m.CreateOrUpdate(item.Type, metric.Name, metric.Value); err != nil {
-				return fmt.Errorf("%s: %v", fn, err)
-			}
+		if err := m.CreateOrUpdate(item); err != nil {
+			fmt.Printf("restore error: %v\n", err)
+			return err
 		}
 	}
 
@@ -215,7 +265,12 @@ func (m *memRepository) restoreFromBak() error {
 }
 
 func (m *memRepository) backup() error {
-	data := m.Dump()
+	const fn = "MemStorage.backup"
+
+	data, err := m.Dump()
+	if err != nil {
+		return fmt.Errorf("backup error: %v", err)
+	}
 
 	if err := m.bak.Save(data); err != nil {
 		return fmt.Errorf("backup error: %v", err)
@@ -225,11 +280,11 @@ func (m *memRepository) backup() error {
 }
 
 func (m *memRepository) startBackup(ctx context.Context) error {
-	if m.storeInterval == 0 {
+	if m.cfg.StoreInterval == 0 {
 		return nil
 	}
 
-	ticker := time.NewTicker(m.storeInterval)
+	ticker := time.NewTicker(time.Duration(m.cfg.StoreInterval) * time.Second)
 
 	go func() {
 		defer ticker.Stop()
@@ -251,21 +306,10 @@ func (m *memRepository) startBackup(ctx context.Context) error {
 	return nil
 }
 
-func New(ctx context.Context, config *config.Config, bak backuper) *memRepository {
+func New(config config.Config) *memRepository {
 	memRepository := &memRepository{
-		data:          make(map[string]any),
-		storeInterval: time.Duration(config.StoreInterval) * time.Second,
-		bak:           bak,
-	}
-
-	counterStorage := mapstorage.NewCounterStorage()
-	gaugeStorage := mapstorage.NewCommonStorage[Gauge]()
-
-	memRepository.AddStorage(counter, counterStorage)
-	memRepository.AddStorage(gauge, gaugeStorage)
-
-	if config.Restore {
-		memRepository.restoreFromBak()
+		data: make(map[string]any),
+		cfg:  config,
 	}
 
 	return memRepository

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"text/template"
 
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 )
 
 const (
@@ -12,14 +12,18 @@ const (
 )
 
 type dumper interface {
-	Dump() []ptypes.Metrics
+	Dump() ([]models.Metrics, error)
 }
 
 func GetRoot(repo dumper) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 
-		metrics := repo.Dump()
+		metrics, err := repo.Dump()
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
 
 		tmpl, err := template.ParseFiles(templatePath)
 		if err != nil {

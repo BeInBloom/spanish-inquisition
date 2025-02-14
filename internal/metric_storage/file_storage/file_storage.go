@@ -1,6 +1,7 @@
 package filestorage
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +10,8 @@ import (
 	"strings"
 	"syscall"
 
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 )
 
 const (
@@ -25,10 +27,10 @@ type fileStorage struct {
 	file *os.File
 }
 
-func New(path string) (*fileStorage, error) {
+func New(cfg config.BakConfig) (*fileStorage, error) {
 	const fn = "fileStorage.New"
 
-	file, err := os.OpenFile(path, fileFlags, filePerms)
+	file, err := os.OpenFile(cfg.Path, fileFlags, filePerms)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
@@ -43,27 +45,20 @@ func (f *fileStorage) Close() error {
 	return f.file.Close()
 }
 
-func (f *fileStorage) Save(data []ptypes.Metrics) error {
+func (f *fileStorage) Save(data []models.Metrics) error {
 	const fn = "fileStorage.Save"
 
-	strData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("%s: %v", fn, err)
+	buf := bufio.NewWriter(f.file)
+	encoder := json.NewEncoder(buf)
+
+	if err := encoder.Encode(data); err != nil {
+		return fmt.Errorf("encode error: %w", err)
 	}
 
-	//если в json будет строка c \n то все сломается, я знаю
-	//причем шанс на ее появляение не нулевой
-	strData = append(strData, '\n')
-
-	_, err = f.file.Write(strData)
-	if err != nil {
-		return fmt.Errorf("%s: %v", fn, err)
-	}
-
-	return nil
+	return buf.Flush()
 }
 
-func (f *fileStorage) Restore() ([]ptypes.Metrics, error) {
+func (f *fileStorage) Restore() ([]models.Metrics, error) {
 	const fn = "fileStorage.Restore"
 
 	strData, err := f.getLastJSON()
@@ -75,7 +70,7 @@ func (f *fileStorage) Restore() ([]ptypes.Metrics, error) {
 		return nil, fmt.Errorf("%s: %v", fn, err)
 	}
 
-	var data []ptypes.Metrics
+	var data []models.Metrics
 
 	if err := json.Unmarshal([]byte(strData), &data); err != nil {
 		return nil, fmt.Errorf("%s: %v", fn, err)

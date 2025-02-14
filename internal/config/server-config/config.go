@@ -29,8 +29,9 @@ type Config struct {
 }
 
 type DBConfig struct {
-	Address   string `yaml:"address" json:"address" env:"DATABASE_DSN"`
-	BakConfig `yaml:"bakconfig" json:"bakconfig"`
+	Address    string `yaml:"address" json:"address" env:"DATABASE_DSN"`
+	DriverName string `yaml:"driver" json:"driver" env:"DATABASE_DRIVER"`
+	BakConfig  `yaml:"bakconfig" json:"bakconfig"`
 }
 
 type ServerConfig struct {
@@ -116,7 +117,9 @@ func parseConfigFromFlags() *Config {
 
 	pflag.StringVarP(&config.BakConfig.Path, "db-path", "d", "./pesiks_better_then_kitiks.txt", "database path")
 	pflag.IntVarP(&config.BakConfig.StoreInterval, "store-interval", "s", 300, "store interval")
+
 	pflag.StringVarP(&config.DBConfig.Address, "db-address", "d", "", "database address")
+	pflag.StringVarP(&config.DBConfig.DriverName, "db-driver", "driver", "pgx", "database driver")
 
 	pflag.Parse()
 

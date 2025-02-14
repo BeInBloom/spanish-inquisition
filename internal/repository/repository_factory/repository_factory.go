@@ -4,7 +4,6 @@ import (
 	"context"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
-	filestorage "github.com/BeInBloom/spanish-inquisition/internal/metric_storage/file_storage"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
 	"github.com/BeInBloom/spanish-inquisition/internal/repository/memrepository"
 	sqlrepository "github.com/BeInBloom/spanish-inquisition/internal/repository/sql_repository"
@@ -25,12 +24,7 @@ type backuper interface {
 }
 
 func NewRepository(cfg config.Config) repository {
-	bak, err := filestorage.New(cfg.BakConfig.Path)
-	if err != nil {
-		panic("cant create bak")
-	}
-
-	repo, err := newSQLRepository(cfg.DBConfig.Address)
+	repo, err := newSQLRepository(cfg.DBConfig)
 	if err != nil {
 		return newMapRepository(cfg)
 	}
@@ -42,7 +36,6 @@ func newMapRepository(cfg config.Config) repository {
 	return memrepository.New(cfg)
 }
 
-func newSQLRepository(dns string) (repository, error) {
-	const driverName = "pgx"
-	return sqlrepository.New(dns, driverName)
+func newSQLRepository(cfg config.DBConfig) (repository, error) {
+	return sqlrepository.New(cfg)
 }

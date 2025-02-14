@@ -11,7 +11,7 @@ import (
 )
 
 type fetcher interface {
-	Get(typeID, id string) (string, error)
+	Get(metric models.Metrics) (string, error)
 }
 
 func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
@@ -19,10 +19,12 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		//Привязка к роутеру?
 
-		typeID := chi.URLParam(r, "type")
-		id := chi.URLParam(r, "name")
+		m := models.Metrics{
+			MType: chi.URLParam(r, "type"),
+			ID:    chi.URLParam(r, "name"),
+		}
 
-		value, err := repo.Get(typeID, id)
+		value, err := repo.Get(m)
 		if err != nil {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
@@ -45,14 +47,13 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		value, err := repo.Get(data.MType, data.ID)
+		value, err := repo.Get(data)
 		if err != nil {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
 
 		m, err := makeGetResponse(data, value)
-
 		if err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return

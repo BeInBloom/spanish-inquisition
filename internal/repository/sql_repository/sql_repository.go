@@ -1,9 +1,11 @@
 package sqlrepository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 
+	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
 	_ "github.com/jackc/pgx/v5"
 )
@@ -23,8 +25,8 @@ type sqlRepository struct {
 	db *sql.DB
 }
 
-func New(dns, driverName string) (*sqlRepository, error) {
-	db, err := sql.Open(driverName, dns)
+func New(cfg config.DBConfig) (*sqlRepository, error) {
+	db, err := sql.Open(cfg.DriverName, cfg.Address)
 	if err != nil {
 		return nil, errors.Join(ErrCantOpenDB, err)
 	}
@@ -56,4 +58,8 @@ func (r *sqlRepository) Get(m models.Metrics) (string, error) {
 
 func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
 	panic("implement me")
+}
+
+func (r *sqlRepository) Init(ctx context.Context) error {
+	return nil
 }
