@@ -6,12 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
 )
 
 var (
@@ -36,7 +34,7 @@ func New(config config.SaverConfig) *httpSaver {
 // "/update/%s/%s/%s"
 // Меня терзают смутные сомнения о том, что код, который имеет альтернативную отправку должен быть "забыт"
 // Возможно, стоит сделать возможность выбора или механизм выбора альтернативного отправления
-func (s *httpSaver) Save(data ptypes.SendData) error {
+func (s *httpSaver) Save(data models.Metrics) error {
 	const fn = "httpSaver.Save"
 
 	if err := s.sendByJSON(data); err != nil {
@@ -48,10 +46,15 @@ func (s *httpSaver) Save(data ptypes.SendData) error {
 	return nil
 }
 
-func (s *httpSaver) sendByParams(data ptypes.SendData) error {
+func (s *httpSaver) sendByParams(data models.Metrics) error {
 	const fn = "httpSaver.sendByParams"
 
-	res, err := s.client.Post(fmt.Sprintf(s.urlToSend+"%s/%s/%s", data.MetricType, data.Name, data.Value), "text/plain", nil)
+	reqString, err := s.getStringByModel(data)
+	if err != nil {
+		return fmt.Errorf("%s: %v", fn, err)
+	}
+
+	res, err := s.client.Post(fmt.Sprintf(s.urlToSend+"%s/", reqString), "text/plain", nil)
 	if err != nil {
 		return fmt.Errorf("%s: %v", fn, err)
 	}
@@ -69,16 +72,21 @@ func (s *httpSaver) sendByParams(data ptypes.SendData) error {
 	return nil
 }
 
-func (s *httpSaver) sendByJSON(data ptypes.SendData) error {
+func (s *httpSaver) getStringByModel(data models.Metrics) (string, error) {
+	switch data.MType {
+	case models.Gauge:
+		return fmt.Sprintf("%s/%s/%f", data.MType, data.ID, *data.Value), nil
+	case models.Counter:
+		return fmt.Sprintf("%s/%s/%d", data.MType, data.ID, *data.Delta), nil
+	default:
+		return "", ErrInvalidMetricType
+	}
+}
+
+func (s *httpSaver) sendByJSON(data models.Metrics) error {
 	const fn = "httpSaver.sendByJSON"
 
-	m, err := makeMetricModel(data)
-
-	if err != nil {
-		return fmt.Errorf("%s: %v", fn, err)
-	}
-
-	jsonMetric, err := json.Marshal(m)
+	jsonMetric, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("%s: %v", fn, err)
 	}
@@ -106,43 +114,4 @@ func (s *httpSaver) sendByJSON(data ptypes.SendData) error {
 	}()
 
 	return nil
-}
-
-// Мб этот код должен быть вынесен в конверторы, куда-то в модели
-// Это пиздец порнография
-func makeMetricModel(data ptypes.SendData) (models.Metrics, error) {
-	switch data.MetricType {
-	case ptypes.Gauge:
-		return makeGaugeModel(data)
-	case ptypes.Counter:
-		return makeCounterModel(data)
-	default:
-		return models.Metrics{}, ErrInvalidMetricType
-	}
-}
-
-func makeCounterModel(data ptypes.SendData) (models.Metrics, error) {
-	num, err := strconv.ParseInt(data.Value, 10, 64)
-	if err != nil {
-		return models.Metrics{}, err
-	}
-
-	return models.Metrics{
-		ID:    data.Name,
-		MType: data.MetricType,
-		Delta: &num,
-	}, nil
-}
-
-func makeGaugeModel(data ptypes.SendData) (models.Metrics, error) {
-	num, err := strconv.ParseFloat(data.Value, 64)
-	if err != nil {
-		return models.Metrics{}, err
-	}
-
-	return models.Metrics{
-		ID:    data.Name,
-		MType: data.MetricType,
-		Value: &num,
-	}, nil
 }

@@ -7,15 +7,15 @@ import (
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 )
 
 type dataFetcher interface {
-	Fetch() ([]ptypes.SendData, error)
+	Fetch() ([]models.Metrics, error)
 }
 
 type saver interface {
-	Save(ptypes.SendData) error
+	Save(models.Metrics) error
 }
 
 type app struct {
@@ -73,7 +73,7 @@ func (a *app) sendData() error {
 	for _, d := range data {
 		wg.Add(1)
 
-		go func(d ptypes.SendData) {
+		go func(d models.Metrics) {
 			defer wg.Done()
 			if err := a.saver.Save(d); err != nil {
 				errs <- err

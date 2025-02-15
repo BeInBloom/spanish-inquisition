@@ -23,6 +23,7 @@ func Filter[T any](slice []T, f func(T) bool) []T {
 	return result
 }
 
-func GetRandomFloat(min, max float64) float64 {
-	return min + (max-min)*rand.Float64()
+func GetRandomFloat(min, max float64) *float64 {
+	res := min + (max-min)*rand.Float64()
+	return &res
 }
