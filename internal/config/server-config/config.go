@@ -23,9 +23,15 @@ const (
 )
 
 type Config struct {
-	ServerConfig   `yaml:"server" json:"server"`
-	EnvConfig      `yaml:"env" json:"env"`
-	DatabaseConfig `yaml:"database" json:"database"`
+	ServerConfig `yaml:"server" json:"server"`
+	EnvConfig    `yaml:"env" json:"env"`
+	DBConfig     `yaml:"database" json:"database"`
+}
+
+type DBConfig struct {
+	Address    string `yaml:"address" json:"address" env:"DATABASE_DSN"`
+	DriverName string `yaml:"driver" json:"driver" env:"DATABASE_DRIVER"`
+	BakConfig  `yaml:"bakconfig" json:"bakconfig"`
 }
 
 type ServerConfig struct {
@@ -33,13 +39,17 @@ type ServerConfig struct {
 	// Port        int           `yaml:"port" json:"port"`
 	Timeout     time.Duration `yaml:"timeout" json:"timeout" env:"TIMEOUT"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" json:"idle_timeout" env:"IDLE_TIMEOUT"`
+	Restore     bool          `yaml:"restore" json:"restore" env:"RESTORE"`
 }
 
 type EnvConfig struct {
 	Env string `yaml:"env" json:"env"`
 }
 
-type DatabaseConfig struct{}
+type BakConfig struct {
+	Path          string `yaml:"path" json:"path" env:"FILE_STORAGE_PATH"`
+	StoreInterval int    `yaml:"store_interval" json:"store_interval" env:"STORE_INTERVAL"`
+}
 
 func New() *Config {
 	const fn = "cfg.New"
@@ -99,9 +109,17 @@ func parseConfigFromFlags() *Config {
 	var config Config
 
 	pflag.StringVarP(&config.ServerConfig.Address, "address", "a", "localhost:8080", "server address")
-	// pflag.IntVarP(&config.ServerConfig.Port, "port", "p", 8080, "server port")
 	pflag.DurationVarP(&config.ServerConfig.Timeout, "timeout", "t", 10*time.Second, "server request timeout")
 	pflag.DurationVarP(&config.ServerConfig.IdleTimeout, "idle-timeout", "i", 10*time.Second, "server idle timeout")
+	pflag.BoolVarP(&config.ServerConfig.Restore, "restore", "r", true, "restore database")
+
+	pflag.StringVarP(&config.EnvConfig.Env, "env", "e", "dev", "environment")
+
+	pflag.StringVarP(&config.BakConfig.Path, "db-path", "f", "./pesiks_better_then_kitiks.txt", "database path")
+	pflag.IntVarP(&config.BakConfig.StoreInterval, "store-interval", "s", 300, "store interval")
+
+	pflag.StringVarP(&config.DBConfig.Address, "db-address", "d", "", "database address")
+	pflag.StringVarP(&config.DBConfig.DriverName, "db-driver", "D", "pgx", "database driver")
 
 	pflag.Parse()
 
@@ -113,7 +131,7 @@ func parseConfigFromFlags() *Config {
 	return &config
 }
 
-func checkEnvConfig(config *ServerConfig) {
+func checkEnvServerConfig(config *ServerConfig) {
 	var envConfig ServerConfig
 
 	if err := env.Parse(&envConfig); err != nil {
@@ -131,11 +149,46 @@ func checkEnvConfig(config *ServerConfig) {
 	if envConfig.IdleTimeout != 0 {
 		config.IdleTimeout = envConfig.IdleTimeout
 	}
+
+	if envConfig.Restore {
+		config.Restore = envConfig.Restore
+	}
+}
+
+func checkEnvBakConfig(config *BakConfig) {
+	var envConfig BakConfig
+
+	if err := env.Parse(&envConfig); err != nil {
+		return
+	}
+
+	if envConfig.Path != "" {
+		config.Path = envConfig.Path
+	}
+
+	//TODO потенциальная проблема
+	if envConfig.StoreInterval != 0 {
+		config.StoreInterval = envConfig.StoreInterval
+	}
+}
+
+func checkEnvDatabaseConfig(config *DBConfig) {
+	var envConfig DBConfig
+
+	if err := env.Parse(&envConfig); err != nil {
+		return
+	}
+
+	if envConfig.Address != "" {
+		config.Address = envConfig.Address
+	}
 }
 
 func getEnvAndFlagConfig() *Config {
 	config := parseConfigFromFlags()
-	checkEnvConfig(&config.ServerConfig)
+	checkEnvServerConfig(&config.ServerConfig)
+	checkEnvBakConfig(&config.BakConfig)
+	checkEnvDatabaseConfig(&config.DBConfig)
 
 	return config
 }

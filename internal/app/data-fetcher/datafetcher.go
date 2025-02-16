@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	h "github.com/BeInBloom/spanish-inquisition/internal/helpers"
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 )
 
 const (
@@ -25,7 +24,7 @@ var (
 
 type dataFetcher struct {
 	ctx          context.Context
-	data         []ptypes.SendData
+	data         []models.Metrics
 	timeToUpdate int64
 	mutex        sync.RWMutex
 	running      int64
@@ -35,7 +34,7 @@ func New(ctx context.Context, timeToUpdate int64) *dataFetcher {
 	fetcher := &dataFetcher{
 		ctx:          ctx,
 		timeToUpdate: timeToUpdate,
-		data:         make([]ptypes.SendData, 0),
+		data:         make([]models.Metrics, 0),
 		running:      0,
 	}
 
@@ -44,12 +43,12 @@ func New(ctx context.Context, timeToUpdate int64) *dataFetcher {
 	return fetcher
 }
 
-func (d *dataFetcher) Fetch() ([]ptypes.SendData, error) {
+func (d *dataFetcher) Fetch() ([]models.Metrics, error) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
 	if d.data != nil {
-		returnedData := make([]ptypes.SendData, len(d.data))
+		returnedData := make([]models.Metrics, len(d.data))
 		copy(returnedData, d.data)
 		return returnedData, nil
 	}
@@ -58,8 +57,15 @@ func (d *dataFetcher) Fetch() ([]ptypes.SendData, error) {
 }
 
 func (d *dataFetcher) start() {
+	const fn = "dataFetcher.start"
+
 	if atomic.CompareAndSwapInt64(&d.running, 1, 0) {
 		return
+	}
+
+	data, err := d.fetchAll()
+	if err == nil {
+		d.data = data
 	}
 
 	ticker := time.NewTicker(time.Duration(d.timeToUpdate) * time.Second)
@@ -92,63 +98,100 @@ func (d *dataFetcher) start() {
 	}()
 }
 
-func (d *dataFetcher) fetchAll() ([]ptypes.SendData, error) {
+func (d *dataFetcher) fetchAll() ([]models.Metrics, error) {
 	metrics := d.fetchMetrics()
 	specificMetrics := d.fetchSpecificMetrics()
 
 	return append(metrics, specificMetrics...), nil
 }
 
-func (d *dataFetcher) fetchSpecificMetrics() []ptypes.SendData {
-	metrics := make([]ptypes.SendData, 0)
+func (d *dataFetcher) fetchSpecificMetrics() []models.Metrics {
+	metrics := make([]models.Metrics, 0)
 
-	metrics = append(metrics, ptypes.SendData{
-		MetricType: Counter,
-		Name:       "PollCount",
-		Value:      "1",
+	var step int64 = 1
+	metrics = append(metrics, models.Metrics{
+		MType: Counter,
+		ID:    "PollCount",
+		Delta: &step,
 	})
-	metrics = append(metrics, ptypes.SendData{
-		MetricType: Gauge,
-		Name:       "RandomValue",
-		Value:      fmt.Sprintf("%v", h.GetRandomFloat(0, 10000)),
+	metrics = append(metrics, models.Metrics{
+		MType: Gauge,
+		ID:    "RandomValue",
+		Value: h.GetRandomFloat(0, 10000),
 	})
 
 	return metrics
 }
 
-func (d *dataFetcher) fetchMetrics() []ptypes.SendData {
+func (d *dataFetcher) fetchMetrics() []models.Metrics {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	metrics := []ptypes.SendData{
-		{MetricType: Gauge, Name: "Alloc", Value: strconv.FormatUint(m.Alloc, 10)},
-		{MetricType: Gauge, Name: "BuckHashSys", Value: strconv.FormatUint(m.BuckHashSys, 10)},
-		{MetricType: Gauge, Name: "Frees", Value: strconv.FormatUint(m.Frees, 10)},
-		{MetricType: Gauge, Name: "GCCPUFraction", Value: strconv.FormatFloat(m.GCCPUFraction, 'f', -1, 64)},
-		{MetricType: Gauge, Name: "GCSys", Value: strconv.FormatUint(m.GCSys, 10)},
-		{MetricType: Gauge, Name: "HeapAlloc", Value: strconv.FormatUint(m.HeapAlloc, 10)},
-		{MetricType: Gauge, Name: "HeapIdle", Value: strconv.FormatUint(m.HeapIdle, 10)},
-		{MetricType: Gauge, Name: "HeapInuse", Value: strconv.FormatUint(m.HeapInuse, 10)},
-		{MetricType: Gauge, Name: "HeapObjects", Value: strconv.FormatUint(m.HeapObjects, 10)},
-		{MetricType: Gauge, Name: "HeapReleased", Value: strconv.FormatUint(m.HeapReleased, 10)},
-		{MetricType: Gauge, Name: "HeapSys", Value: strconv.FormatUint(m.HeapSys, 10)},
-		{MetricType: Gauge, Name: "LastGC", Value: strconv.FormatUint(m.LastGC, 10)},
-		{MetricType: Gauge, Name: "Lookups", Value: strconv.FormatUint(m.Lookups, 10)},
-		{MetricType: Gauge, Name: "MCacheInuse", Value: strconv.FormatUint(m.MCacheInuse, 10)},
-		{MetricType: Gauge, Name: "MCacheSys", Value: strconv.FormatUint(m.MCacheSys, 10)},
-		{MetricType: Gauge, Name: "MSpanInuse", Value: strconv.FormatUint(m.MSpanInuse, 10)},
-		{MetricType: Gauge, Name: "MSpanSys", Value: strconv.FormatUint(m.MSpanSys, 10)},
-		{MetricType: Gauge, Name: "Mallocs", Value: strconv.FormatUint(m.Mallocs, 10)},
-		{MetricType: Gauge, Name: "NextGC", Value: strconv.FormatUint(m.NextGC, 10)},
-		{MetricType: Gauge, Name: "NumForcedGC", Value: strconv.FormatUint(uint64(m.NumForcedGC), 10)},
-		{MetricType: Gauge, Name: "NumGC", Value: strconv.FormatUint(uint64(m.NumGC), 10)},
-		{MetricType: Gauge, Name: "OtherSys", Value: strconv.FormatUint(m.OtherSys, 10)},
-		{MetricType: Gauge, Name: "PauseTotalNs", Value: strconv.FormatUint(m.PauseTotalNs, 10)},
-		{MetricType: Gauge, Name: "StackInuse", Value: strconv.FormatUint(m.StackInuse, 10)},
-		{MetricType: Gauge, Name: "StackSys", Value: strconv.FormatUint(m.StackSys, 10)},
-		{MetricType: Gauge, Name: "Sys", Value: strconv.FormatUint(m.Sys, 10)},
-		{MetricType: Gauge, Name: "TotalAlloc", Value: strconv.FormatUint(m.TotalAlloc, 10)},
+	metrics := []models.Metrics{
+		{MType: Gauge, ID: "Alloc", Value: toFloat64Ptr(m.Alloc)},
+		{MType: Gauge, ID: "BuckHashSys", Value: toFloat64Ptr(m.BuckHashSys)},
+		{MType: Gauge, ID: "Frees", Value: toFloat64Ptr(m.Frees)},
+		{MType: Gauge, ID: "GCCPUFraction", Value: toFloat64Ptr(m.GCCPUFraction)},
+		{MType: Gauge, ID: "GCSys", Value: toFloat64Ptr(m.GCSys)},
+		{MType: Gauge, ID: "HeapAlloc", Value: toFloat64Ptr(m.HeapAlloc)},
+		{MType: Gauge, ID: "HeapIdle", Value: toFloat64Ptr(m.HeapIdle)},
+		{MType: Gauge, ID: "HeapInuse", Value: toFloat64Ptr(m.HeapInuse)},
+		{MType: Gauge, ID: "HeapObjects", Value: toFloat64Ptr(m.HeapObjects)},
+		{MType: Gauge, ID: "HeapReleased", Value: toFloat64Ptr(m.HeapReleased)},
+		{MType: Gauge, ID: "HeapSys", Value: toFloat64Ptr(m.HeapSys)},
+		{MType: Gauge, ID: "LastGC", Value: toFloat64Ptr(m.LastGC)},
+		{MType: Gauge, ID: "Lookups", Value: toFloat64Ptr(m.Lookups)},
+		{MType: Gauge, ID: "MCacheInuse", Value: toFloat64Ptr(m.MCacheInuse)},
+		{MType: Gauge, ID: "MCacheSys", Value: toFloat64Ptr(m.MCacheSys)},
+		{MType: Gauge, ID: "MSpanInuse", Value: toFloat64Ptr(m.MSpanInuse)},
+		{MType: Gauge, ID: "MSpanSys", Value: toFloat64Ptr(m.MSpanSys)},
+		{MType: Gauge, ID: "Mallocs", Value: toFloat64Ptr(m.Mallocs)},
+		{MType: Gauge, ID: "NextGC", Value: toFloat64Ptr(m.NextGC)},
+		{MType: Gauge, ID: "NumForcedGC", Value: toFloat64Ptr(m.NumForcedGC)},
+		{MType: Gauge, ID: "NumGC", Value: toFloat64Ptr(m.NumGC)},
+		{MType: Gauge, ID: "OtherSys", Value: toFloat64Ptr(m.OtherSys)},
+		{MType: Gauge, ID: "PauseTotalNs", Value: toFloat64Ptr(m.PauseTotalNs)},
+		{MType: Gauge, ID: "StackInuse", Value: toFloat64Ptr(m.StackInuse)},
+		{MType: Gauge, ID: "StackSys", Value: toFloat64Ptr(m.StackSys)},
+		{MType: Gauge, ID: "Sys", Value: toFloat64Ptr(m.Sys)},
+		{MType: Gauge, ID: "TotalAlloc", Value: toFloat64Ptr(m.TotalAlloc)},
 	}
 
 	return metrics
+}
+
+func toFloat64Ptr(value interface{}) *float64 {
+	switch v := value.(type) {
+	case int:
+		result := float64(v)
+		return &result
+	case float32:
+		result := float64(v)
+		return &result
+	case float64:
+		return &v
+	case int64:
+		result := float64(v)
+		return &result
+	case int32:
+		result := float64(v)
+		return &result
+	case uint:
+		result := float64(v)
+		return &result
+	case uint8:
+		result := float64(v)
+		return &result
+	case uint16:
+		result := float64(v)
+		return &result
+	case uint32:
+		result := float64(v)
+		return &result
+	case uint64:
+		result := float64(v)
+		return &result
+	}
+
+	return nil
 }

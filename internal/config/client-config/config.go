@@ -27,18 +27,6 @@ type Config struct {
 	AppConfig    AppConfig   `yaml:"app" json:"app"`
 }
 
-// type FetcherConfig struct {
-// 	UpdateTime int64 `yaml:"update_time" json:"update_time"`
-// }
-
-// type AppConfig struct {
-// 	ReportInterval int64        `yaml:"report_interval" json:"report_interval"`
-// 	PollingRate    int64        `yaml:"polling_rate" json:"polling_rate"`
-// 	ReportURL      string       `yaml:"report_url" json:"report_url"`
-// 	ClientConfig   ClientConfig `yaml:"server" json:"server"`
-// 	SaverConfig    `yaml:"saver" json:"saver"`
-// }
-
 // // TODO: переделать это говно
 type SaverConfig struct {
 	Timeout int    `yaml:"timeout" json:"timeout" env:"SAVER_TIMEOUT"`
@@ -48,10 +36,6 @@ type SaverConfig struct {
 type AppConfig struct {
 	ReportInterval int `yaml:"report_interval" json:"report_interval" env:"REPORT_INTERVAL"`
 }
-
-// type ClientConfig struct {
-// 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
-// }
 
 func New() *Config {
 	const fn = "cfg.New"

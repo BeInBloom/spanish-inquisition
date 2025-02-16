@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -8,28 +9,46 @@ import (
 
 	app "github.com/BeInBloom/spanish-inquisition/internal/app/server-app"
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
+	"github.com/BeInBloom/spanish-inquisition/internal/logger"
+	repositoryfactory "github.com/BeInBloom/spanish-inquisition/internal/repository/repository_factory"
 )
 
 func main() {
 	fmt.Printf("Read config...\n")
 	cfg := config.New()
 
-	fmt.Printf("%v\n", cfg)
+	logger, err := logger.New(cfg.Env)
+	if err != nil {
+		panic(err)
+	}
 
-	fmt.Printf("Creating app...\n")
-	app := app.New(cfg.ServerConfig)
+	ctx, cansel := context.WithCancel(context.Background())
+
+	logger.Info("Logger initialized")
+
+	logger.Info("Initializing repositories...")
+
+	repo := repositoryfactory.NewRepository(*cfg)
+	repo.Init(ctx)
+	logger.Info("Repositories initialized")
+
+	logger.Info(fmt.Sprintf("Starting server on %s", cfg.ServerConfig.Address))
+	app := app.New(cfg.ServerConfig, logger, repo)
 	app.Init()
+	logger.Info("Server initialized")
 
-	fmt.Printf("Starting server...\n")
+	logger.Info("Starting server...")
 	go app.Run()
+	logger.Info("Server started")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
 	if err := app.Close(); err != nil {
-		fmt.Printf("Error during server shutdown: %v", err)
+		logger.Error(err.Error())
+		cansel()
 	}
 
-	fmt.Println("Server stopped")
+	logger.Info("Server stopped")
 }

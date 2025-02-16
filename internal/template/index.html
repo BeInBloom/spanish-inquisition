@@ -25,18 +25,32 @@
 <body>
 	<h1 style="text-align: center;">Metrics</h1>
 	{{range .}}
-		<h2>{{.Type}}</h2>
+		<h2>{{.MType}}</h2>
 		<table>
 			<tr>
-				<th>Name</th>
+				<th>ID</th>
+				<th>Type</th>
+				<th>Delta</th>
 				<th>Value</th>
 			</tr>
-			{{range .Values}}
 			<tr>
-				<td>{{.Name}}</td>
-				<td>{{.Value}}</td>
+				<td>{{.ID}}</td>
+				<td>{{.MType}}</td>
+				<td>
+					{{if .Delta}}
+						{{.Delta}}
+					{{else}}
+						N/A
+					{{end}}
+				</td>
+				<td>
+					{{if .Value}}
+						{{.Value}}
+					{{else}}
+						N/A
+					{{end}}
+				</td>
 			</tr>
-			{{end}}
 		</table>
 	{{end}}
 </body>

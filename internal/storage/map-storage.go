@@ -2,81 +2,104 @@ package mapstorage
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 )
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound             = errors.New("not found")
+	ErrUnexpectedMetricType = errors.New("unexpected metric type")
 )
 
-type storage[T any] struct {
+type storage struct {
 	mutex sync.Mutex
-	data  map[string]T
+	data  map[string]models.Metrics
 }
 
-type counterStorage struct {
-	storage[int64]
-}
+func (s *storage) Get(item models.Metrics) (models.Metrics, error) {
+	const fn = "storage.Get"
 
-func (s *counterStorage) Create(id string, item int64) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.data[id] += item
+	key := s.getKey(item)
 
-	return nil
-}
-
-func (s *storage[T]) Get(id string) (T, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	value, ok := s.data[id]
+	value, ok := s.data[key]
 	if !ok {
-		return value, ErrNotFound
+		return models.Metrics{}, ErrNotFound
 	}
 
 	return value, nil
 }
 
-func (s *storage[T]) Dump() []ptypes.Metric {
+func (s *storage) Dump() []models.Metrics {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var result []ptypes.Metric
+	var result []models.Metrics
 
-	for id, item := range s.data {
-		result = append(result, ptypes.Metric{
-			Name:  id,
-			Value: fmt.Sprintf("%v", item),
-		})
+	for _, item := range s.data {
+		result = append(result, item)
+
 	}
 
 	return result
 }
 
-func (s *storage[T]) Create(id string, item T) error {
+func (s *storage) Create(item models.Metrics) error {
+	const fn = "storage.Create"
+
+	switch item.MType {
+	case models.Counter:
+		s.createCounter(item)
+		return nil
+	case models.Gauge:
+		s.createGauge(item)
+		return nil
+	default:
+		return ErrUnexpectedMetricType
+	}
+
+}
+
+func (s *storage) createGauge(item models.Metrics) {
+	const fn = "storage.createGauge"
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.data[id] = item
-
-	return nil
+	key := s.getKey(item)
+	s.data[key] = item
 }
 
-func NewCommonStorage[T any]() *storage[T] {
-	return &storage[T]{
-		data: make(map[string]T),
+func (s *storage) createCounter(item models.Metrics) {
+	const fn = "storage.createCounter"
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	key := s.getKey(item)
+
+	_, ok := s.data[key]
+	if !ok {
+		s.data[s.getKey(item)] = item
+		return
+	}
+
+	if s.data[key].Delta != nil && item.Delta != nil {
+		*s.data[key].Delta += *item.Delta
 	}
 }
 
-func NewCounterStorage() *counterStorage {
-	return &counterStorage{
-		storage[int64]{
-			data: make(map[string]int64),
-		},
+func (s *storage) getKey(item models.Metrics) string {
+	return item.MType + item.ID
+}
+
+func New() *storage {
+	data := make(map[string]models.Metrics)
+
+	return &storage{
+		data: data,
 	}
 }

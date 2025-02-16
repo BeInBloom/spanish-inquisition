@@ -1,17 +1,22 @@
 package ptypes
 
+const (
+	Gauge   = "gauge"
+	Counter = "counter"
+)
+
 type SendData struct {
-	MetricType string
-	Name       string
-	Value      string
+	MetricType string `json:"type"`
+	Name       string `json:"name"`
+	Value      string `json:"value"`
 }
 
 type Metrics struct {
-	Type   string
-	Values []Metric
+	Type   string   `json:"type"`
+	Values []Metric `json:"values"`
 }
 
 type Metric struct {
-	Name  string
-	Value string
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
