@@ -115,12 +115,12 @@ func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (id, type) DO UPDATE SET
             delta = CASE
-                WHEN metrics.type = 'counter' THEN COALESCE(metrics.delta, 0) + COALESCE(EXCLUDED.delta, 0)
+                WHEN metric.type = 'counter' THEN COALESCE(metrics.delta, 0) + COALESCE(EXCLUDED.delta, 0)
                 ELSE EXCLUDED.delta
             END,
             value = CASE
-                WHEN metrics.type = 'gauge' THEN EXCLUDED.value
-                ELSE metrics.value
+                WHEN metric.type = 'gauge' THEN EXCLUDED.value
+                ELSE metric.value
             END;
     `
 
