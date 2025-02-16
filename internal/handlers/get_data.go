@@ -17,7 +17,6 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		//Привязка к роутеру?
-
 		m := models.Metrics{
 			MType: chi.URLParam(r, "type"),
 			ID:    chi.URLParam(r, "name"),

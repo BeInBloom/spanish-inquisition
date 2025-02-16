@@ -46,8 +46,8 @@ type memRepository struct {
 func (m *memRepository) Get(metric models.Metrics) (models.Metrics, error) {
 	const fn = "MemStorage.Get"
 
-	if err := m.validateMetric(metric); err != nil {
-		return models.Metrics{}, fmt.Errorf("%v: %v", fn, err)
+	if metric.MType == "" || metric.ID == "" {
+		return models.Metrics{}, fmt.Errorf("%v: %v", fn, ErrNotCorrectType)
 	}
 
 	return m.data.Get(metric)

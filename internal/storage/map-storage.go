@@ -29,6 +29,9 @@ func (s *storage) Get(item models.Metrics) (models.Metrics, error) {
 		return models.Metrics{}, fmt.Errorf("%s: %v", fn, err)
 	}
 
+	fmt.Printf("hash: %v\n", hash)
+	fmt.Printf("data: %v\n", s.data)
+
 	value, ok := s.data[hash]
 	if !ok {
 		return models.Metrics{}, ErrNotFound
