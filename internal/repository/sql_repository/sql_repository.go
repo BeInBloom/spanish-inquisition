@@ -12,13 +12,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type repository interface {
-	CreateOrUpdate(models.Metrics) error
-	Get(models.Metrics) (string, error)
-	Dump() ([]models.Metrics, error)
-	Check() error
-}
-
 var (
 	ErrCantOpenDB           = errors.New("can't open db")
 	ErrNotCorrectType       = errors.New("not correct type")
@@ -123,9 +116,22 @@ func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
 		return fmt.Errorf("%v: %v", fn, err)
 	}
 
+	var deltaValue sql.NullInt64
+	var floatValue sql.NullFloat64
+
+	if m.Delta != nil {
+		deltaValue = sql.NullInt64{Int64: *m.Delta, Valid: true}
+	}
+	if m.Value != nil {
+		floatValue = sql.NullFloat64{Float64: *m.Value, Valid: true}
+	}
+
 	query := sq.Insert("metric").
 		Columns("id", "type", "delta", "value").
-		Values(m.ID, m.MType, m.Delta, m.Value)
+		Values(m.ID, m.MType, deltaValue, floatValue).
+		Suffix(`ON CONFLICT (id, type) DO UPDATE SET
+			delta = EXCLUDED.delta,
+			value = EXCLUDED.value`)
 
 	sqlQuery, args, err := query.ToSql()
 	if err != nil {
