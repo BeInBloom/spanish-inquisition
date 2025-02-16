@@ -1,82 +1,93 @@
 package mapstorage
 
 import (
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"sync"
 
-	ptypes "github.com/BeInBloom/spanish-inquisition/internal/types"
+	"github.com/BeInBloom/spanish-inquisition/internal/models"
 )
 
 var (
 	ErrNotFound = errors.New("not found")
 )
 
-type storage[T any] struct {
+type storage struct {
 	mutex sync.Mutex
-	data  map[string]T
+	data  map[string]models.Metrics
 }
 
-type counterStorage struct {
-	storage[int64]
-}
+func (s *storage) Get(item models.Metrics) (models.Metrics, error) {
+	const fn = "storage.Get"
 
-func (s *counterStorage) Create(id string, item int64) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.data[id] += item
+	hash, err := s.getHash(item)
+	if err != nil {
+		return models.Metrics{}, fmt.Errorf("%s: %v", fn, err)
+	}
 
-	return nil
-}
-
-func (s *storage[T]) Get(id string) (T, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	value, ok := s.data[id]
+	value, ok := s.data[hash]
 	if !ok {
-		return value, ErrNotFound
+		return models.Metrics{}, ErrNotFound
 	}
 
 	return value, nil
 }
 
-func (s *storage[T]) Dump() []ptypes.Metric {
+func (s *storage) Dump() []models.Metrics {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var result []ptypes.Metric
+	var result []models.Metrics
 
-	for id, item := range s.data {
-		result = append(result, ptypes.Metric{
-			Name:  id,
-			Value: fmt.Sprintf("%v", item),
-		})
+	for _, item := range s.data {
+		result = append(result, item)
+
 	}
 
 	return result
 }
 
-func (s *storage[T]) Create(id string, item T) error {
+func (s *storage) Create(item models.Metrics) error {
+	const fn = "storage.Create"
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.data[id] = item
+	hash, err := s.getHash(item)
+	if err != nil {
+		return fmt.Errorf("%s: %v", fn, err)
+	}
+
+	s.data[hash] = item
 
 	return nil
 }
 
-func NewCommonStorage[T any]() *storage[T] {
-	return &storage[T]{
-		data: make(map[string]T),
+func (s *storage) getHash(item models.Metrics) (string, error) {
+	const fn = "storage.getHash"
+	hash := md5.New()
+
+	_, err := hash.Write([]byte(item.ID))
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", fn, err)
 	}
+
+	_, err = hash.Write([]byte(item.MType))
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", fn, err)
+	}
+
+	return string(hash.Sum(nil)), nil
 }
 
-func NewCounterStorage() *counterStorage {
-	return &counterStorage{
-		storage[int64]{
-			data: make(map[string]int64),
-		},
+func New() *storage {
+	data := make(map[string]models.Metrics)
+
+	return &storage{
+		data: data,
 	}
 }

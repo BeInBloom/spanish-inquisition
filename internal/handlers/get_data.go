@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
 	"github.com/go-chi/chi/v5"
 )
 
 type fetcher interface {
-	Get(metric models.Metrics) (string, error)
+	Get(metric models.Metrics) (models.Metrics, error)
 }
 
 func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +30,7 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(value))
+		w.Write([]byte(parsMetricsForValue(value)))
 	}
 }
 
@@ -53,13 +52,7 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		m, err := makeGetResponse(data, value)
-		if err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
-			return
-		}
-
-		if err := json.NewEncoder(w).Encode(m); err != nil {
+		if err := json.NewEncoder(w).Encode(value); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
@@ -68,30 +61,13 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func makeGetResponse(m models.Metrics, val string) (models.Metrics, error) {
-	switch m.MType {
-	case "gauge":
-		num, err := strconv.ParseFloat(val, 64)
-		if err != nil {
-			return models.Metrics{}, err
-		}
-
-		return models.Metrics{
-			ID:    m.ID,
-			MType: m.MType,
-			Value: &num,
-		}, nil
-	case "counter":
-		val, err := strconv.ParseInt(val, 10, 64)
-		if err != nil {
-			return models.Metrics{}, err
-		}
-		return models.Metrics{
-			ID:    m.ID,
-			MType: m.MType,
-			Delta: &val,
-		}, nil
+func parsMetricsForValue(data models.Metrics) string {
+	switch data.MType {
+	case models.Gauge:
+		return fmt.Sprintf("%f", *data.Value)
+	case models.Counter:
+		return fmt.Sprintf("%d", *data.Delta)
 	default:
-		return models.Metrics{}, fmt.Errorf("unknown metric type: %s", m.MType)
+		return ""
 	}
 }

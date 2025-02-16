@@ -52,7 +52,7 @@ func (r *sqlRepository) Dump() ([]models.Metrics, error) {
 	panic("implement me")
 }
 
-func (r *sqlRepository) Get(m models.Metrics) (string, error) {
+func (r *sqlRepository) Get(m models.Metrics) (models.Metrics, error) {
 	panic("implement me")
 }
 

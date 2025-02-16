@@ -11,16 +11,11 @@ import (
 
 type repository interface {
 	CreateOrUpdate(models.Metrics) error
-	Get(models.Metrics) (string, error)
+	Get(models.Metrics) (models.Metrics, error)
 	Dump() ([]models.Metrics, error)
 	Check() error
 	Init(context.Context) error
 	Close() error
-}
-
-type backuper interface {
-	Save([]models.Metrics) error
-	Restore() ([]models.Metrics, error)
 }
 
 func NewRepository(cfg config.Config) repository {
