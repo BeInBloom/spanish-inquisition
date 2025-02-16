@@ -136,6 +136,7 @@ func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
 
 	_, err := r.db.Exec(query, m.ID, m.MType, delta, value)
 	if err != nil {
+		fmt.Printf("failed to create or update metric: %v\n", err)
 		return fmt.Errorf("failed to create or update metric: %w", err)
 	}
 
