@@ -64,7 +64,7 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 func parsMetricsForValue(data models.Metrics) string {
 	switch data.MType {
 	case models.Gauge:
-		return strconv.FormatFloat(*data.Value, 'f', 3, 64)
+		return strconv.FormatFloat(*data.Value, 'f', -1, 64)
 	case models.Counter:
 		return fmt.Sprintf("%d", *data.Delta)
 	default:
