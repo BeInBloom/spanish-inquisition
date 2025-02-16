@@ -115,7 +115,7 @@ func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (id, type) DO UPDATE SET
             delta = CASE
-                WHEN metric.type = 'counter' THEN COALESCE(metrics.delta, 0) + COALESCE(EXCLUDED.delta, 0)
+                WHEN metric.type = 'counter' THEN COALESCE(metric.delta, 0) + COALESCE(EXCLUDED.delta, 0)
                 ELSE EXCLUDED.delta
             END,
             value = CASE
@@ -196,7 +196,7 @@ func (r *sqlRepository) Init(ctx context.Context) error {
 
 	_, err := r.db.ExecContext(ctx, query)
 	if err != nil {
-		return fmt.Errorf("failed to create metric table: %w", err)
+		panic(err)
 	}
 
 	return nil
