@@ -170,24 +170,22 @@ func (m *memRepository) startBackup(ctx context.Context) error {
 	}
 
 	ticker := time.NewTicker(time.Duration(m.cfg.StoreInterval) * time.Second)
-	defer ticker.Stop()
 
-	done := make(chan struct{})
 	go func() {
-		defer close(done)
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
-				if err := m.backup(); err != nil {
-					fmt.Printf("final backup failed\n", err)
-				}
 				return
 			case <-ticker.C:
+				//TODO: пока так, потом переделаю
 				if err := m.backup(); err != nil {
-					fmt.Printf("periodic backup failed\n", err)
+					fmt.Printf("backup error: %v\n", err)
 				}
 			}
 		}
+
 	}()
 
 	return nil
