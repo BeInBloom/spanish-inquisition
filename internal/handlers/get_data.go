@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
 	"github.com/go-chi/chi/v5"
@@ -16,7 +17,7 @@ type fetcher interface {
 func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		//Привязка к роутеру?
+
 		m := models.Metrics{
 			MType: chi.URLParam(r, "type"),
 			ID:    chi.URLParam(r, "name"),
@@ -63,7 +64,7 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 func parsMetricsForValue(data models.Metrics) string {
 	switch data.MType {
 	case models.Gauge:
-		return fmt.Sprintf("%f", *data.Value)
+		return strconv.FormatFloat(*data.Value, 'f', 3, 64)
 	case models.Counter:
 		return fmt.Sprintf("%d", *data.Delta)
 	default:
