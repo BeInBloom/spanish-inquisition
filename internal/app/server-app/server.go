@@ -104,11 +104,11 @@ func (a *app) initHandlers() {
 		r.Route("/value", func(r chi.Router) {
 			r.With(middleware.AllowContentType("application/json")).Get("/", handlers.GetDataByJSON(a.repo))
 			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.GetDataByJSON(a.repo))
-			r.With(middleware.AllowContentType("text/plain")).Get("/{type}/{name}/", handlers.GetData(a.repo))
+			r.With(middleware.AllowContentType("text/plain")).Get("/{type}/{name}", handlers.GetData(a.repo))
 		})
 		r.Route("/update", func(r chi.Router) {
 			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.CreateOrUpdateByJSON(a.repo))
-			r.With(middleware.AllowContentType("text/plain")).Post("/{type}/{name}/{value}/", handlers.CreateOrUpdate(a.repo))
+			r.With(middleware.AllowContentType("text/plain")).Post("/{type}/{name}/{value}", handlers.CreateOrUpdate(a.repo))
 		})
 	})
 
