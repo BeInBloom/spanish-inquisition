@@ -111,7 +111,7 @@ func (r *sqlRepository) Get(m models.Metrics) (models.Metrics, error) {
 
 func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
 	const query = `
-        INSERT INTO metrics (id, type, delta, value)
+        INSERT INTO metric (id, type, delta, value)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (id, type) DO UPDATE SET
             delta = CASE
@@ -123,6 +123,10 @@ func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
                 ELSE metrics.value
             END;
     `
+
+	if err := r.validateMetric(m); err != nil {
+		return fmt.Errorf("failed to create or update metric: %w", err)
+	}
 
 	var delta sql.NullInt64
 	var value sql.NullFloat64
