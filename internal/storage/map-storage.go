@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound             = errors.New("not found")
+	ErrUnexpectedMetricType = errors.New("unexpected metric type")
 )
 
 type storage struct {
@@ -49,14 +50,46 @@ func (s *storage) Dump() []models.Metrics {
 func (s *storage) Create(item models.Metrics) error {
 	const fn = "storage.Create"
 
+	switch item.MType {
+	case models.Counter:
+		s.createCounter(item)
+		return nil
+	case models.Gauge:
+		s.createGauge(item)
+		return nil
+	default:
+		return ErrUnexpectedMetricType
+	}
+
+}
+
+func (s *storage) createGauge(item models.Metrics) {
+	const fn = "storage.createGauge"
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	key := s.getKey(item)
+	s.data[key] = item
+}
+
+func (s *storage) createCounter(item models.Metrics) {
+	const fn = "storage.createCounter"
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	key := s.getKey(item)
 
-	s.data[key] = item
+	_, ok := s.data[key]
+	if !ok {
+		s.data[s.getKey(item)] = item
+		return
+	}
 
-	return nil
+	if s.data[key].Delta != nil && item.Delta != nil {
+		*s.data[key].Delta += *item.Delta
+	}
 }
 
 func (s *storage) getKey(item models.Metrics) string {
