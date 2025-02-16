@@ -1,9 +1,7 @@
 package mapstorage
 
 import (
-	"crypto/md5"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
@@ -24,15 +22,9 @@ func (s *storage) Get(item models.Metrics) (models.Metrics, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	hash, err := s.getHash(item)
-	if err != nil {
-		return models.Metrics{}, fmt.Errorf("%s: %v", fn, err)
-	}
+	key := s.getKey(item)
 
-	fmt.Printf("hash: %v\n", hash)
-	fmt.Printf("data: %v\n", s.data)
-
-	value, ok := s.data[hash]
+	value, ok := s.data[key]
 	if !ok {
 		return models.Metrics{}, ErrNotFound
 	}
@@ -60,31 +52,15 @@ func (s *storage) Create(item models.Metrics) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	hash, err := s.getHash(item)
-	if err != nil {
-		return fmt.Errorf("%s: %v", fn, err)
-	}
+	key := s.getKey(item)
 
-	s.data[hash] = item
+	s.data[key] = item
 
 	return nil
 }
 
-func (s *storage) getHash(item models.Metrics) (string, error) {
-	const fn = "storage.getHash"
-	hash := md5.New()
-
-	_, err := hash.Write([]byte(item.ID))
-	if err != nil {
-		return "", fmt.Errorf("%s: %v", fn, err)
-	}
-
-	_, err = hash.Write([]byte(item.MType))
-	if err != nil {
-		return "", fmt.Errorf("%s: %v", fn, err)
-	}
-
-	return string(hash.Sum(nil)), nil
+func (s *storage) getKey(item models.Metrics) string {
+	return item.MType + item.ID
 }
 
 func New() *storage {
