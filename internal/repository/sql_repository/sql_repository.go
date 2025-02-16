@@ -69,14 +69,7 @@ func (r *sqlRepository) Dump() ([]models.Metrics, error) {
 		return nil, fmt.Errorf("%v: %v", fn, err)
 	}
 
-	defer func() {
-		if rows != nil {
-			if err := rows.Close(); err != nil {
-				fmt.Println(err.Error())
-				return
-			}
-		}
-	}()
+	defer rows.Close()
 
 	var res []models.Metrics
 	for rows.Next() {
@@ -87,6 +80,10 @@ func (r *sqlRepository) Dump() ([]models.Metrics, error) {
 		}
 
 		res = append(res, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%v: %v", fn, err)
 	}
 
 	return res, nil
