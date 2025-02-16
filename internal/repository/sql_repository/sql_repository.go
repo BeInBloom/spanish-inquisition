@@ -110,41 +110,74 @@ func (r *sqlRepository) Get(m models.Metrics) (models.Metrics, error) {
 }
 
 func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
-	const fn = "sqlRepository.CreateOrUpdate"
+	const query = `
+        INSERT INTO metrics (id, type, delta, value)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (id, type) DO UPDATE SET
+            delta = CASE
+                WHEN metrics.type = 'counter' THEN COALESCE(metrics.delta, 0) + COALESCE(EXCLUDED.delta, 0)
+                ELSE EXCLUDED.delta
+            END,
+            value = CASE
+                WHEN metrics.type = 'gauge' THEN EXCLUDED.value
+                ELSE metrics.value
+            END;
+    `
 
-	if err := r.validateMetric(m); err != nil {
-		return fmt.Errorf("%v: %v", fn, err)
-	}
-
-	var deltaValue sql.NullInt64
-	var floatValue sql.NullFloat64
+	var delta sql.NullInt64
+	var value sql.NullFloat64
 
 	if m.Delta != nil {
-		deltaValue = sql.NullInt64{Int64: *m.Delta, Valid: true}
+		delta = sql.NullInt64{Int64: *m.Delta, Valid: true}
 	}
 	if m.Value != nil {
-		floatValue = sql.NullFloat64{Float64: *m.Value, Valid: true}
+		value = sql.NullFloat64{Float64: *m.Value, Valid: true}
 	}
 
-	query := sq.Insert("metric").
-		Columns("id", "type", "delta", "value").
-		Values(m.ID, m.MType, deltaValue, floatValue).
-		Suffix(`ON CONFLICT (id, type) DO UPDATE SET
-			delta = EXCLUDED.delta,
-			value = EXCLUDED.value`)
-
-	sqlQuery, args, err := query.ToSql()
+	_, err := r.db.Exec(query, m.ID, m.MType, delta, value)
 	if err != nil {
-		return fmt.Errorf("%v: %v", fn, err)
-	}
-
-	_, err = r.db.Exec(sqlQuery, args...)
-	if err != nil {
-		return fmt.Errorf("%v: %v", fn, err)
+		return fmt.Errorf("failed to create or update metric: %w", err)
 	}
 
 	return nil
 }
+
+// func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
+// 	const fn = "sqlRepository.CreateOrUpdate"
+
+// 	if err := r.validateMetric(m); err != nil {
+// 		return fmt.Errorf("%v: %v", fn, err)
+// 	}
+
+// 	var deltaValue sql.NullInt64
+// 	var floatValue sql.NullFloat64
+
+// 	if err := deltaValue.Scan(m.Delta); err != nil {
+// 		return fmt.Errorf("%v: %v", fn, err)
+// 	}
+// 	if err := floatValue.Scan(m.Value); err != nil {
+// 		return fmt.Errorf("%v: %v", fn, err)
+// 	}
+
+// 	query := sq.Insert("metric").
+// 		Columns("id", "type", "delta", "value").
+// 		Values(m.ID, m.MType, deltaValue, floatValue).
+// 		Suffix(`ON CONFLICT (id, type) DO UPDATE SET
+// 			delta = EXCLUDED.delta,
+// 			value = EXCLUDED.value`)
+
+// 	sqlQuery, args, err := query.ToSql()
+// 	if err != nil {
+// 		return fmt.Errorf("%v: %v", fn, err)
+// 	}
+
+// 	_, err = r.db.Exec(sqlQuery, args...)
+// 	if err != nil {
+// 		return fmt.Errorf("%v: %v", fn, err)
+// 	}
+
+// 	return nil
+// }
 
 func (r *sqlRepository) Init(ctx context.Context) error {
 	query := `
