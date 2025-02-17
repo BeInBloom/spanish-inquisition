@@ -110,7 +110,7 @@ func (a *app) initHandlers() {
 			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.CreateOrUpdateByJSON(a.repo))
 			r.With(middleware.AllowContentType("text/plain")).Post("/{type}/{name}/{value}", handlers.CreateOrUpdate(a.repo))
 		})
-		r.Route("/updates/", func(r chi.Router) {
+		r.Route("/updates", func(r chi.Router) {
 			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.CreateOrUpdate(a.repo))
 		})
 	})
