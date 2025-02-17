@@ -27,7 +27,7 @@ func New(config config.SaverConfig) *httpSaver {
 			Timeout: 10 * time.Second,
 		},
 		//Fix it
-		urlToSend: "http://" + config.URL + "/update/",
+		urlToSend: "http://" + config.URL,
 	}
 }
 
@@ -93,14 +93,16 @@ func (s *httpSaver) sendBatch(data []models.Metrics) error {
 }
 
 func (s *httpSaver) sendByParams(data models.Metrics) error {
-	const fn = "httpSaver.sendByParams"
-
+	const (
+		fn           = "httpSaver.sendByParams"
+		updateSuffix = "/update/"
+	)
 	reqString, err := s.getStringByModel(data)
 	if err != nil {
 		return fmt.Errorf("%s: %v", fn, err)
 	}
 
-	res, err := s.client.Post(fmt.Sprintf(s.urlToSend+"%s/", reqString), "text/plain", nil)
+	res, err := s.client.Post(fmt.Sprintf(s.urlToSend+updateSuffix+"%s/", reqString), "text/plain", nil)
 	if err != nil {
 		return fmt.Errorf("%s: %v", fn, err)
 	}

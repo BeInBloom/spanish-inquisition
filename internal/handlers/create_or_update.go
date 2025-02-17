@@ -72,7 +72,7 @@ func CreateOrUpdateByJSON(storage saver) func(w http.ResponseWriter, r *http.Req
 	}
 }
 
-func CreateOrUpdateMassive(storage saver) func(w http.ResponseWriter, r *http.Request) {
+func CreateOrUpdateByJSONBatch(storage saver) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
