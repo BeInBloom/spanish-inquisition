@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
@@ -15,7 +14,7 @@ type dataFetcher interface {
 }
 
 type saver interface {
-	Save(models.Metrics) error
+	Save(...models.Metrics) error
 }
 
 type app struct {
@@ -67,31 +66,8 @@ func (a *app) sendData() error {
 		return fmt.Errorf("%s: %v", fn, err)
 	}
 
-	errs := make(chan error, len(data))
-	wg := &sync.WaitGroup{}
-
-	for _, d := range data {
-		wg.Add(1)
-
-		go func(d models.Metrics) {
-			defer wg.Done()
-			if err := a.saver.Save(d); err != nil {
-				errs <- err
-			}
-		}(d)
-	}
-
-	wg.Wait()
-	close(errs)
-
-	var errsList []error
-	for err := range errs {
-		errsList = append(errsList, err)
-	}
-
-	if len(errsList) > 0 {
-		fmt.Printf("Errors: %v\n", errsList)
-		return fmt.Errorf("%s: %v", fn, errsList)
+	if err := a.saver.Save(data...); err != nil {
+		return fmt.Errorf("%s: %v", fn, err)
 	}
 
 	return nil

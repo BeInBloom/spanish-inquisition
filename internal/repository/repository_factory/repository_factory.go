@@ -19,12 +19,16 @@ type repository interface {
 }
 
 func NewRepository(cfg config.Config) repository {
-	repo, err := newSQLRepository(cfg.DBConfig)
-	if err != nil {
-		return newMapRepository(cfg)
+	if cfg.DBConfig.Address != "" {
+		repo, err := newSQLRepository(cfg.DBConfig)
+		if err != nil {
+			panic(err)
+		}
+
+		return repo
 	}
 
-	return repo
+	return newMapRepository(cfg)
 }
 
 func newMapRepository(cfg config.Config) repository {
