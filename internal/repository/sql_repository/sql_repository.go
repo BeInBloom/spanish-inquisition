@@ -185,7 +185,7 @@ func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
 // }
 
 func (r *sqlRepository) Init(ctx context.Context) error {
-	query := `
+	const query = `
     CREATE TABLE IF NOT EXISTS metric (
         id VARCHAR(255) NOT NULL,
         type VARCHAR(7) NOT NULL CHECK (type IN ('gauge', 'counter')),

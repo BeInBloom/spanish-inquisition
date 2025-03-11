@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: server
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db:5432
+    command: ["./server", "-d", "postgres://user:password@db:5432/mydb?sslmode=disable"]
+    ports:
+      - "8080:8080"
+  db:
+    image: postgres:15-alpine
+    container_name: y-psql
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
