@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
+	"github.com/BeInBloom/spanish-inquisition/internal/wrappers"
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -49,34 +51,43 @@ func (r *sqlRepository) Check() error {
 func (r *sqlRepository) Dump() ([]models.Metrics, error) {
 	const fn = "sqlRepository.Dump"
 
-	query := sq.Select("id", "type", "delta", "value").
-		From("metric")
-
-	sqlQuery, args, err := query.ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("%v: %v", fn, err)
-	}
-
-	rows, err := r.db.Query(sqlQuery, args...)
-	if err != nil {
-		return nil, fmt.Errorf("%v: %v", fn, err)
-	}
-
-	defer rows.Close()
-
 	var res []models.Metrics
-	for rows.Next() {
-		var m models.Metrics
 
-		if err := rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value); err != nil {
-			return nil, fmt.Errorf("%v: %v", fn, err)
+	f := func() error {
+		query := sq.Select("id", "type", "delta", "value").
+			From("metric")
+
+		sqlQuery, args, err := query.ToSql()
+		if err != nil {
+			return fmt.Errorf("%v: %v", fn, err)
 		}
 
-		res = append(res, m)
+		rows, err := r.db.Query(sqlQuery, args...)
+		if err != nil {
+			return fmt.Errorf("%v: %v", fn, err)
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var m models.Metrics
+
+			if err := rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value); err != nil {
+				return fmt.Errorf("%v: %v", fn, err)
+			}
+
+			res = append(res, m)
+		}
+
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("%v: %v", fn, err)
+		}
+
+		return nil
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%v: %v", fn, err)
+	if err := wrappers.RetryWrapper(f, 3, 2*time.Second); err != nil {
+		return nil, err
 	}
 
 	return res, nil
@@ -89,16 +100,20 @@ func (r *sqlRepository) Get(m models.Metrics) (models.Metrics, error) {
 		FROM metric
 		WHERE id = $1 AND type = $2`
 
-	fmt.Printf("we in Get: %s\n", fn)
-
 	var metric models.Metrics
 
-	row := r.db.QueryRow(query, m.ID, m.MType)
-	if err := row.Scan(&m.ID, &metric.MType, &metric.Delta, &metric.Value); err != nil {
-		return models.Metrics{}, fmt.Errorf("%v: %v", fn, err)
+	f := func() error {
+		row := r.db.QueryRow(query, m.ID, m.MType)
+		if err := row.Scan(&m.ID, &metric.MType, &metric.Delta, &metric.Value); err != nil {
+			return fmt.Errorf("%v: %v", fn, err)
+		}
+
+		return nil
 	}
 
-	fmt.Printf("Get res: %v\n", metric)
+	if err := wrappers.RetryWrapper(f, 3, 2*time.Second); err != nil {
+		return models.Metrics{}, err
+	}
 
 	return metric, nil
 }
@@ -122,20 +137,28 @@ func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {
 		return fmt.Errorf("failed to create or update metric: %w", err)
 	}
 
-	var delta sql.NullInt64
-	var value sql.NullFloat64
+	f := func() error {
+		var delta sql.NullInt64
+		var value sql.NullFloat64
 
-	if m.Delta != nil {
-		delta = sql.NullInt64{Int64: *m.Delta, Valid: true}
-	}
-	if m.Value != nil {
-		value = sql.NullFloat64{Float64: *m.Value, Valid: true}
+		if m.Delta != nil {
+			delta = sql.NullInt64{Int64: *m.Delta, Valid: true}
+		}
+		if m.Value != nil {
+			value = sql.NullFloat64{Float64: *m.Value, Valid: true}
+		}
+
+		_, err := r.db.Exec(query, m.ID, m.MType, delta, value)
+		if err != nil {
+			fmt.Printf("failed to create or update metric: %v\n", err)
+			return fmt.Errorf("failed to create or update metric: %w", err)
+		}
+
+		return nil
 	}
 
-	_, err := r.db.Exec(query, m.ID, m.MType, delta, value)
-	if err != nil {
-		fmt.Printf("failed to create or update metric: %v\n", err)
-		return fmt.Errorf("failed to create or update metric: %w", err)
+	if err := wrappers.RetryWrapper(f, 3, 2*time.Second); err != nil {
+		return err
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import (
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
+	"github.com/BeInBloom/spanish-inquisition/internal/wrappers"
 )
 
 type dataFetcher interface {
@@ -46,7 +47,7 @@ func (a *app) Run() error {
 			return a.ctx.Err()
 		case <-ticker.C:
 			fmt.Println("Sending data...")
-			if err := a.sendData(); err != nil {
+			if err := wrappers.RetryWrapper(a.sendData, 3, 2*time.Second); err != nil {
 				fmt.Printf("Error sending data: %v\n", err)
 			}
 		}
