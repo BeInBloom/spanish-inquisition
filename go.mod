@@ -1,6 +1,6 @@
 module github.com/BeInBloom/spanish-inquisition
 
-go 1.22.11
+go 1.23.7
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
