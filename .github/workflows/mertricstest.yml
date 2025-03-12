@@ -55,7 +55,7 @@ jobs:
       - name: Setup go deps
         run: |
           go install golang.org/x/tools/cmd/goimports@latest
-          go mod tidy
+
 
       - name: Build server binary
         run: |
