@@ -10,7 +10,7 @@ services:
       - db
     environment:
       - DB_HOST=db:5432
-    command: ["./server", "-d", "postgres://user:password@db:5432/mydb?sslmode=disable"]
+    command: ["./server"]
     ports:
       - "8080:8080"
   db:

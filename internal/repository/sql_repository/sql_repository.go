@@ -84,29 +84,23 @@ func (r *sqlRepository) Dump() ([]models.Metrics, error) {
 
 func (r *sqlRepository) Get(m models.Metrics) (models.Metrics, error) {
 	const fn = "sqlRepository.Get"
+	const query = `
+		SELECT id, type, delta, value
+		FROM metric
+		WHERE id = $1 AND type = $2`
 
-	query := sq.Select("id", "type", "delta", "value").
-		From("metric").
-		Where(sq.Eq{"id": m.ID, "type": m.MType})
+	fmt.Printf("we in Get: %s\n", fn)
 
-	sqlQuery, args, err := query.ToSql()
-	if err != nil {
+	var metric models.Metrics
+
+	row := r.db.QueryRow(query, m.ID, m.MType)
+	if err := row.Scan(&m.ID, &metric.MType, &metric.Delta, &metric.Value); err != nil {
 		return models.Metrics{}, fmt.Errorf("%v: %v", fn, err)
 	}
 
-	var res models.Metrics
-	err = r.db.QueryRow(sqlQuery, args...).Scan(
-		&res.ID, &res.MType, &res.Delta, &res.Value)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return models.Metrics{}, fmt.Errorf("%v: %v", fn, ErrRepoNotFound)
-		}
+	fmt.Printf("Get res: %v\n", metric)
 
-		return models.Metrics{}, fmt.Errorf("%v: %v", fn, err)
-	}
-
-	return res, nil
-
+	return metric, nil
 }
 
 func (r *sqlRepository) CreateOrUpdate(m models.Metrics) error {

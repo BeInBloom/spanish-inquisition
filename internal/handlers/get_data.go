@@ -23,7 +23,12 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			ID:    chi.URLParam(r, "name"),
 		}
 
+		fmt.Printf("GetData: %+v\n", m)
+
 		value, err := repo.Get(m)
+
+		fmt.Printf("GetData value: %+v\n", value)
+
 		if err != nil {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
