@@ -2,6 +2,7 @@ package httpsaver
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +21,7 @@ var (
 type httpSaver struct {
 	client    *http.Client
 	urlToSend string
+	key       string
 }
 
 func New(config config.SaverConfig) *httpSaver {
@@ -29,6 +31,7 @@ func New(config config.SaverConfig) *httpSaver {
 		},
 		//Fix it
 		urlToSend: "http://" + config.URL,
+		key:       config.Key,
 	}
 }
 
@@ -68,6 +71,11 @@ func (s *httpSaver) sendBatch(data []models.Metrics) error {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
+
+	if s.key != "" {
+		hash := sha256.Sum256(jsonMetric)
+		req.Header.Set("HashSHA256", string(hash[:]))
+	}
 
 	res, err := s.client.Do(req)
 	if err != nil {

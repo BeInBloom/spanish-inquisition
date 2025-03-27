@@ -154,6 +154,10 @@ func checkEnvServerConfig(config *ServerConfig) {
 	if envConfig.Restore {
 		config.Restore = envConfig.Restore
 	}
+
+	if envConfig.Key != "" {
+		config.Key = envConfig.Key
+	}
 }
 
 func checkEnvBakConfig(config *BakConfig) {

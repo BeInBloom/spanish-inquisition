@@ -35,6 +35,7 @@ type app struct {
 	server *http.Server
 	repo   repository
 	log    *zap.Logger
+	key    string
 }
 
 func New(config config.ServerConfig, log *zap.Logger, repo repository) *app {
@@ -48,6 +49,7 @@ func New(config config.ServerConfig, log *zap.Logger, repo repository) *app {
 		},
 		repo: repo,
 		log:  log,
+		key:  config.Key,
 	}
 }
 
@@ -96,14 +98,17 @@ func (a *app) initHandlers() {
 		middleware.Recoverer,
 	)
 
+	if a.key != "" {
+		r.Use(middlewares.CheckHash)
+	}
+
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", handlers.GetRoot(a.repo))
 		r.Route("/ping", func(r chi.Router) {
 			r.Get("/", handlers.Ping(a.repo))
 		})
 		r.Route("/value", func(r chi.Router) {
-			r.With(middleware.AllowContentType("application/json")).Get("/", handlers.GetDataByJSON(a.repo))
-			r.With(middleware.AllowContentType("application/json")).Post("/", handlers.GetDataByJSON(a.repo))
+			r.With(middleware.AllowContentType("application/json")).Get("/", handlers.GetDataByJSON(a.repo, a.key))
 			r.With(middleware.AllowContentType("text/plain")).Get("/{type}/{name}", handlers.GetData(a.repo))
 		})
 		r.Route("/update", func(r chi.Router) {
