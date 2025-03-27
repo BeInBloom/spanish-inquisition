@@ -40,8 +40,8 @@ type ServerConfig struct {
 	Timeout     time.Duration `yaml:"timeout" json:"timeout" env:"TIMEOUT"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" json:"idle_timeout" env:"IDLE_TIMEOUT"`
 	Restore     bool          `yaml:"restore" json:"restore" env:"RESTORE"`
+	Key         string        `yaml:"key" json:"key" env:"KEY"`
 }
-
 type EnvConfig struct {
 	Env string `yaml:"env" json:"env"`
 }
@@ -112,6 +112,7 @@ func parseConfigFromFlags() *Config {
 	pflag.DurationVarP(&config.ServerConfig.Timeout, "timeout", "t", 10*time.Second, "server request timeout")
 	pflag.DurationVarP(&config.ServerConfig.IdleTimeout, "idle-timeout", "i", 10*time.Second, "server idle timeout")
 	pflag.BoolVarP(&config.ServerConfig.Restore, "restore", "r", true, "restore database")
+	pflag.StringVarP(&config.EnvConfig.Env, "key", "k", "", "key")
 
 	pflag.StringVarP(&config.EnvConfig.Env, "env", "e", "dev", "environment")
 
