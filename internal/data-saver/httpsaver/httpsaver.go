@@ -2,6 +2,7 @@ package httpsaver
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,11 +15,13 @@ import (
 
 var (
 	ErrInvalidMetricType = errors.New("invalid metric type")
+	ErrSendingEmptyBatch = errors.New("sending empty batch")
 )
 
 type httpSaver struct {
 	client    *http.Client
 	urlToSend string
+	key       string
 }
 
 func New(config config.SaverConfig) *httpSaver {
@@ -28,6 +31,7 @@ func New(config config.SaverConfig) *httpSaver {
 		},
 		//Fix it
 		urlToSend: "http://" + config.URL,
+		key:       config.Key,
 	}
 }
 
@@ -38,20 +42,14 @@ func (s *httpSaver) Save(data ...models.Metrics) error {
 	const fn = "httpSaver.Save"
 
 	if len(data) == 1 {
-		if err := s.sendByJSON(data[0]); err != nil {
-			if err := s.sendByParams(data[0]); err != nil {
-				return fmt.Errorf("%s: %v", fn, err)
-			}
-		}
+		return s.sendByParams(data[0])
 	}
 
 	if len(data) > 1 {
-		if err := s.sendBatch(data); err != nil {
-			return fmt.Errorf("%s: %v", fn, err)
-		}
+		return s.sendBatch(data)
 	}
 
-	return nil
+	return ErrSendingEmptyBatch
 }
 
 func (s *httpSaver) sendBatch(data []models.Metrics) error {
@@ -73,6 +71,11 @@ func (s *httpSaver) sendBatch(data []models.Metrics) error {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
+
+	if s.key != "" {
+		hash := sha256.Sum256(jsonMetric)
+		req.Header.Set("HashSHA256", string(hash[:]))
+	}
 
 	res, err := s.client.Do(req)
 	if err != nil {

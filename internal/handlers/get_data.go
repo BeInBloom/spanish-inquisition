@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,7 +40,7 @@ func GetData(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
+func GetDataByJSON(repo fetcher, k string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -57,13 +58,25 @@ func GetDataByJSON(repo fetcher) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(value); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+		jsonString, err := json.Marshal(value)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 
+		if k != "" {
+			createSignature(jsonString, &w)
+		}
+
+		w.Write(jsonString)
+
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+func createSignature(data []byte, r *http.ResponseWriter) {
+	hash := sha256.Sum256(data)
+	(*r).Header().Set("HashSHA256", string(hash[:]))
 }
 
 func parsMetricsForValue(data models.Metrics) string {

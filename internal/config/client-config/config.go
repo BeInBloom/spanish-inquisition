@@ -31,6 +31,7 @@ type Config struct {
 type SaverConfig struct {
 	Timeout int    `yaml:"timeout" json:"timeout" env:"SAVER_TIMEOUT"`
 	URL     string `yaml:"url" json:"url" env:"ADDRESS"`
+	Key     string `yaml:"key" json:"key" env:"KEY"`
 }
 
 type AppConfig struct {
