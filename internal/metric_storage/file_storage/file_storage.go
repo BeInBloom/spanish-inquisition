@@ -9,9 +9,11 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/server-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
+	"github.com/BeInBloom/spanish-inquisition/internal/wrappers"
 )
 
 const (
@@ -30,12 +32,23 @@ type fileStorage struct {
 func New(cfg config.BakConfig) (*fileStorage, error) {
 	const fn = "fileStorage.New"
 
-	file, err := os.OpenFile(cfg.Path, fileFlags, filePerms)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %v", fn, err)
+	var file *os.File
+
+	f := func() error {
+		var err error
+
+		file, err = os.OpenFile(cfg.Path, fileFlags, filePerms)
+		if err != nil {
+			return fmt.Errorf("%s: %v", fn, err)
+		}
+
+		return nil
 	}
 
-	//Являет ли такое создание гарантией того, что в file не будет nil?
+	if err := wrappers.RetryWrapper(f, 3, 2*time.Second); err != nil {
+		return nil, err
+	}
+
 	return &fileStorage{
 		file: file,
 	}, nil

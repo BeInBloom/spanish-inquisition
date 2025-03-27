@@ -27,18 +27,26 @@ func New(config config.SaverConfig) *httpSaver {
 			Timeout: 10 * time.Second,
 		},
 		//Fix it
-		urlToSend: "http://" + config.URL + "/update/",
+		urlToSend: "http://" + config.URL,
 	}
 }
 
 // "/update/%s/%s/%s"
 // Меня терзают смутные сомнения о том, что код, который имеет альтернативную отправку должен быть "забыт"
 // Возможно, стоит сделать возможность выбора или механизм выбора альтернативного отправления
-func (s *httpSaver) Save(data models.Metrics) error {
+func (s *httpSaver) Save(data ...models.Metrics) error {
 	const fn = "httpSaver.Save"
 
-	if err := s.sendByJSON(data); err != nil {
-		if err := s.sendByParams(data); err != nil {
+	if len(data) == 1 {
+		if err := s.sendByJSON(data[0]); err != nil {
+			if err := s.sendByParams(data[0]); err != nil {
+				return fmt.Errorf("%s: %v", fn, err)
+			}
+		}
+	}
+
+	if len(data) > 1 {
+		if err := s.sendBatch(data); err != nil {
 			return fmt.Errorf("%s: %v", fn, err)
 		}
 	}
@@ -46,15 +54,55 @@ func (s *httpSaver) Save(data models.Metrics) error {
 	return nil
 }
 
-func (s *httpSaver) sendByParams(data models.Metrics) error {
-	const fn = "httpSaver.sendByParams"
+func (s *httpSaver) sendBatch(data []models.Metrics) error {
+	const (
+		fn          = "httpSaver.sendBatch"
+		batchSuffix = "/updates/"
+	)
 
+	jsonMetric, err := json.Marshal(data)
+	if err != nil {
+		fmt.Printf("Error marshaling data: %v\n", err)
+	}
+
+	reqAddr := s.urlToSend + batchSuffix
+	req, err := http.NewRequest(http.MethodPost, reqAddr, bytes.NewBuffer(jsonMetric))
+	if err != nil {
+		return fmt.Errorf("%s: %v", fn, err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	res, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%s: %v", fn, err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s: unexpected status code: %v", fn, res.StatusCode)
+	}
+
+	defer func() {
+		if res != nil && res.Body != nil {
+			res.Body.Close()
+		}
+	}()
+
+	return nil
+}
+
+func (s *httpSaver) sendByParams(data models.Metrics) error {
+	const (
+		fn           = "httpSaver.sendByParams"
+		updateSuffix = "/update/"
+	)
 	reqString, err := s.getStringByModel(data)
 	if err != nil {
 		return fmt.Errorf("%s: %v", fn, err)
 	}
 
-	res, err := s.client.Post(fmt.Sprintf(s.urlToSend+"%s/", reqString), "text/plain", nil)
+	res, err := s.client.Post(fmt.Sprintf(s.urlToSend+updateSuffix+"%s/", reqString), "text/plain", nil)
 	if err != nil {
 		return fmt.Errorf("%s: %v", fn, err)
 	}

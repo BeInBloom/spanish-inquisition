@@ -3,11 +3,11 @@ package app
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
 	"github.com/BeInBloom/spanish-inquisition/internal/models"
+	"github.com/BeInBloom/spanish-inquisition/internal/wrappers"
 )
 
 type dataFetcher interface {
@@ -15,7 +15,7 @@ type dataFetcher interface {
 }
 
 type saver interface {
-	Save(models.Metrics) error
+	Save(...models.Metrics) error
 }
 
 type app struct {
@@ -47,7 +47,7 @@ func (a *app) Run() error {
 			return a.ctx.Err()
 		case <-ticker.C:
 			fmt.Println("Sending data...")
-			if err := a.sendData(); err != nil {
+			if err := wrappers.RetryWrapper(a.sendData, 3, 2*time.Second); err != nil {
 				fmt.Printf("Error sending data: %v\n", err)
 			}
 		}
@@ -67,31 +67,8 @@ func (a *app) sendData() error {
 		return fmt.Errorf("%s: %v", fn, err)
 	}
 
-	errs := make(chan error, len(data))
-	wg := &sync.WaitGroup{}
-
-	for _, d := range data {
-		wg.Add(1)
-
-		go func(d models.Metrics) {
-			defer wg.Done()
-			if err := a.saver.Save(d); err != nil {
-				errs <- err
-			}
-		}(d)
-	}
-
-	wg.Wait()
-	close(errs)
-
-	var errsList []error
-	for err := range errs {
-		errsList = append(errsList, err)
-	}
-
-	if len(errsList) > 0 {
-		fmt.Printf("Errors: %v\n", errsList)
-		return fmt.Errorf("%s: %v", fn, errsList)
+	if err := a.saver.Save(data...); err != nil {
+		return fmt.Errorf("%s: %v", fn, err)
 	}
 
 	return nil

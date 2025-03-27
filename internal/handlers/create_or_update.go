@@ -71,3 +71,33 @@ func CreateOrUpdateByJSON(storage saver) func(w http.ResponseWriter, r *http.Req
 		w.Write([]byte("{\"status\": \"ok\"}"))
 	}
 }
+
+func CreateOrUpdateByJSONBatch(storage saver) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		var data []models.Metrics
+
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&data); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		for _, d := range data {
+			if err := storage.CreateOrUpdate(d); err != nil {
+				if errors.Is(err, mr.ErrRepoNotFound) {
+					http.Error(w, "not found", http.StatusNotFound)
+					return
+				}
+
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+
+		w.Write([]byte("{\"status\": \"ok\"}"))
+	}
+}
