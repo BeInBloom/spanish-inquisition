@@ -112,7 +112,7 @@ func parseConfigFromFlags() *Config {
 	pflag.DurationVarP(&config.ServerConfig.Timeout, "timeout", "t", 10*time.Second, "server request timeout")
 	pflag.DurationVarP(&config.ServerConfig.IdleTimeout, "idle-timeout", "i", 10*time.Second, "server idle timeout")
 	pflag.BoolVarP(&config.ServerConfig.Restore, "restore", "r", true, "restore database")
-	pflag.StringVarP(&config.EnvConfig.Env, "key", "k", "", "key")
+	pflag.StringVarP(&config.ServerConfig.Key, "key", "k", "", "key")
 
 	pflag.StringVarP(&config.EnvConfig.Env, "env", "e", "dev", "environment")
 
