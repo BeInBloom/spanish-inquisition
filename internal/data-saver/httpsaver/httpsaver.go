@@ -14,6 +14,7 @@ import (
 
 var (
 	ErrInvalidMetricType = errors.New("invalid metric type")
+	ErrSendingEmptyBatch = errors.New("sending empty batch")
 )
 
 type httpSaver struct {
@@ -38,20 +39,14 @@ func (s *httpSaver) Save(data ...models.Metrics) error {
 	const fn = "httpSaver.Save"
 
 	if len(data) == 1 {
-		if err := s.sendByJSON(data[0]); err != nil {
-			if err := s.sendByParams(data[0]); err != nil {
-				return fmt.Errorf("%s: %v", fn, err)
-			}
-		}
+		return s.sendByParams(data[0])
 	}
 
 	if len(data) > 1 {
-		if err := s.sendBatch(data); err != nil {
-			return fmt.Errorf("%s: %v", fn, err)
-		}
+		return s.sendBatch(data)
 	}
 
-	return nil
+	return ErrSendingEmptyBatch
 }
 
 func (s *httpSaver) sendBatch(data []models.Metrics) error {

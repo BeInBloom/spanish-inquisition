@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+var (
+	ErrAttemptsExceeded = errors.New("attempts exceeded")
+)
+
 type wrappedFunc func() error
 
 func RetryWrapper(f wrappedFunc, attempts int, sleepStep time.Duration) error {
@@ -23,5 +27,5 @@ func RetryWrapper(f wrappedFunc, attempts int, sleepStep time.Duration) error {
 		timeToSleep = timeToSleep + sleepStep
 	}
 
-	return allErrors
+	return errors.Join(allErrors, ErrAttemptsExceeded)
 }
