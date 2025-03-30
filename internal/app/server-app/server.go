@@ -99,7 +99,7 @@ func (a *app) initHandlers() {
 	)
 
 	if a.key != "" {
-		r.Use(middlewares.CheckHash)
+		r.Use(middlewares.CheckHash(a.key))
 	}
 
 	r.Route("/", func(r chi.Router) {

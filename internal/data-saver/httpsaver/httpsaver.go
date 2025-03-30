@@ -2,7 +2,9 @@ package httpsaver
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -73,8 +75,8 @@ func (s *httpSaver) sendBatch(data []models.Metrics) error {
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	if s.key != "" {
-		hash := sha256.Sum256(jsonMetric)
-		req.Header.Set("HashSHA256", string(hash[:]))
+		hash := s.createHash(jsonMetric)
+		req.Header.Set("HashSHA256", hash)
 	}
 
 	res, err := s.client.Do(req)
@@ -93,6 +95,16 @@ func (s *httpSaver) sendBatch(data []models.Metrics) error {
 	}()
 
 	return nil
+}
+
+func (s *httpSaver) createHash(data []byte) string {
+	h := hmac.New(sha256.New, []byte(s.key))
+
+	h.Write(data)
+
+	hash := h.Sum(nil)
+
+	return hex.EncodeToString(hash)
 }
 
 func (s *httpSaver) sendByParams(data models.Metrics) error {

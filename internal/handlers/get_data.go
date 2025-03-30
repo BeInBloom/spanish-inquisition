@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -65,7 +67,7 @@ func GetDataByJSON(repo fetcher, k string) func(w http.ResponseWriter, r *http.R
 		}
 
 		if k != "" {
-			createSignature(jsonString, &w)
+			createSignature(jsonString, k, &w)
 		}
 
 		w.Write(jsonString)
@@ -74,9 +76,14 @@ func GetDataByJSON(repo fetcher, k string) func(w http.ResponseWriter, r *http.R
 	}
 }
 
-func createSignature(data []byte, r *http.ResponseWriter) {
-	hash := sha256.Sum256(data)
-	(*r).Header().Set("HashSHA256", string(hash[:]))
+func createSignature(data []byte, key string, r *http.ResponseWriter) {
+	h := hmac.New(sha256.New, []byte(key))
+
+	h.Write(data)
+
+	hash := h.Sum(nil)
+
+	(*r).Header().Set("HashSHA256", hex.EncodeToString(hash))
 }
 
 func parsMetricsForValue(data models.Metrics) string {
