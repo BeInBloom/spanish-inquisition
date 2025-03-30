@@ -113,6 +113,8 @@ func (d *dataFetcher) start() {
 					d.data = data
 				}
 
+				fmt.Printf("Data: %+v\n", d.data)
+
 				d.mutex.Unlock()
 			}
 		}
@@ -169,6 +171,8 @@ func (d *dataFetcher) fetchAll() ([]models.Metrics, error) {
 	if len(allErrors) > 0 {
 		return nil, fmt.Errorf("%s: %v", fn, allErrors)
 	}
+
+	fmt.Printf("Fetched %d metrics\n", len(allData))
 
 	return allData, nil
 }
