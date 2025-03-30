@@ -128,8 +128,14 @@ func (d *dataFetcher) fetchAll() ([]models.Metrics, error) {
 	cErr := make(chan error, len(d.fetchers))
 
 	go func() {
+		var wg sync.WaitGroup
+
 		for _, f := range d.fetchers {
+			wg.Add(1)
+
 			go func(fetcher fetcher) {
+				defer wg.Done()
+
 				data, err := fetcher.Fetch()
 				if err != nil {
 					cErr <- err
@@ -139,6 +145,8 @@ func (d *dataFetcher) fetchAll() ([]models.Metrics, error) {
 				cData <- data
 			}(f)
 		}
+
+		wg.Wait()
 
 		defer func() {
 			close(cData)
