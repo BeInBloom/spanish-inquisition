@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	config "github.com/BeInBloom/spanish-inquisition/internal/config/client-config"
@@ -22,7 +23,7 @@ type app struct {
 	ctx context.Context
 	// client         *http.Client
 	saver          saver
-	fetcher        dataFetcher
+	fetcher        []dataFetcher
 	reportInterval int64
 }
 
@@ -61,23 +62,44 @@ func (a *app) Close() error {
 
 func (a *app) sendData() error {
 	const fn = "app.sendData"
+	var mutex sync.Mutex
 
-	data, err := a.fetcher.Fetch()
-	if err != nil {
-		return fmt.Errorf("%s: %v", fn, err)
+	var wg sync.WaitGroup
+	var allData []models.Metrics
+	var allErrors []error
+	for _, fetcher := range a.fetcher {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			data, err := fetcher.Fetch()
+			if err != nil {
+				allErrors = append(allErrors, err)
+				return
+			}
+
+			mutex.Lock()
+			defer mutex.Unlock()
+			allData = append(allData, data...)
+		}()
+
 	}
 
-	if err := a.saver.Save(data...); err != nil {
+	if err := a.saver.Save(allData...); err != nil {
 		return fmt.Errorf("%s: %v", fn, err)
 	}
 
 	return nil
 }
 
-func New(fetcher dataFetcher, saver saver, config config.AppConfig) *app {
+func (a *app) AddFetcher(fetcher ...dataFetcher) {
+	a.fetcher = append(a.fetcher, fetcher...)
+}
+
+func New(saver saver, config config.AppConfig) *app {
 	return &app{
 		saver:          saver,
-		fetcher:        fetcher,
+		fetcher:        nil,
 		reportInterval: int64(config.ReportInterval),
 	}
 }

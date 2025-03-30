@@ -21,7 +21,9 @@ func main() {
 	fetcher := datafetcher.New(ctx, int64(cfg.PollInterval))
 	saver := httpsaver.New(cfg.SaverConfig)
 
-	app := app.New(fetcher, saver, cfg.AppConfig)
+	app := app.New(saver, cfg.AppConfig)
+
+	app.AddFetcher(fetcher)
 	app.Init(ctx)
 
 	fmt.Println("Agent started")

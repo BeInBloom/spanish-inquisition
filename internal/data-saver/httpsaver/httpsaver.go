@@ -24,6 +24,7 @@ type httpSaver struct {
 	client    *http.Client
 	urlToSend string
 	key       string
+	// limit     int
 }
 
 func New(config config.SaverConfig) *httpSaver {
@@ -54,6 +55,8 @@ func (s *httpSaver) Save(data ...models.Metrics) error {
 	return ErrSendingEmptyBatch
 }
 
+// Видимо, там какая-то другая логика. Я не очень понимаю, какие запросы нужно ограничивать
+// У меня 1 запрос раз в n-секунд пачкой
 func (s *httpSaver) sendBatch(data []models.Metrics) error {
 	const (
 		fn          = "httpSaver.sendBatch"
