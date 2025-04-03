@@ -74,7 +74,7 @@ func (a *app) sendData() error {
 	return nil
 }
 
-func New(fetcher dataFetcher, saver saver, config config.AppConfig) *app {
+func New(saver saver, config config.AppConfig, fetcher dataFetcher) *app {
 	return &app{
 		saver:          saver,
 		fetcher:        fetcher,

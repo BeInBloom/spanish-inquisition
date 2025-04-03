@@ -31,6 +31,7 @@ type Config struct {
 type SaverConfig struct {
 	Timeout int    `yaml:"timeout" json:"timeout" env:"SAVER_TIMEOUT"`
 	URL     string `yaml:"url" json:"url" env:"ADDRESS"`
+	Key     string `yaml:"key" json:"key" env:"KEY"`
 }
 
 type AppConfig struct {
@@ -98,6 +99,7 @@ func parseConfigFromFlags() *Config {
 	pflag.IntVarP(&config.AppConfig.ReportInterval, "report-interval", "r", 10, "report interval")
 	pflag.IntVarP(&config.PollInterval, "poll-interval", "p", 10, "polling interval")
 	pflag.IntVarP(&config.SaverConfig.Timeout, "timeout", "t", 10, "timeout")
+	pflag.StringVarP(&config.SaverConfig.Key, "key", "k", "", "key")
 	pflag.Parse()
 
 	if pflag.NArg() > 0 {
@@ -135,5 +137,9 @@ func checkEnvConfig(config *Config) {
 
 	if envConfig.SaverConfig.URL != "" {
 		config.SaverConfig.URL = envConfig.SaverConfig.URL
+	}
+
+	if envConfig.SaverConfig.Key != "" {
+		config.SaverConfig.Key = envConfig.SaverConfig.Key
 	}
 }
